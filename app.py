@@ -18,13 +18,13 @@ from src.model_downloader import ensure_model_downloaded
 from src.pipeline import run_pipeline
 
 st.set_page_config(
-    page_title="AI Photo Restoration Studio",
+    page_title="PixelRevive – AI-Powered Image Restoration",
     page_icon="🎨",
     layout="wide"
 )
 
 st.markdown("""
-# 🎨 AI Photo Restoration & Colorization Studio
+# 🎨 PixelRevive – AI-Powered Image Restoration
 
 Restore, enhance, and colorize photographs using computer vision and deep learning.
 """)

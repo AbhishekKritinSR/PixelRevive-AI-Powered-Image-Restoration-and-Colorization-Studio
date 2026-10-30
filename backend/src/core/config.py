@@ -34,7 +34,7 @@ class Settings:
     """Centralized application settings for the FastAPI backend service."""
 
     # Project Information
-    PROJECT_NAME: str = "AI Photo Restoration & Colorization Studio"
+    PROJECT_NAME: str = "PixelRevive – AI-Powered Image Restoration"
     PROJECT_VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     DESCRIPTION: str = (

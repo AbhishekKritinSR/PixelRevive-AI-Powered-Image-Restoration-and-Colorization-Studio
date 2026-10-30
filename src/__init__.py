@@ -1,1 +1,1 @@
-"""Core image-processing package for the AI Photo Restoration & Colorization Studio."""
+"""Core image-processing package for PixelRevive – AI-Powered Image Restoration."""

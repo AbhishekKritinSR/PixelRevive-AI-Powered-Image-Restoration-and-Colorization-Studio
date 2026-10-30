@@ -46,7 +46,7 @@ export const App: React.FC = () => {
 
       <main className="main-content">
         <div className="hero-banner">
-          <h1 className="hero-title">AI Photo Restoration & Colorization Studio</h1>
+          <h1 className="hero-title">PixelRevive – AI-Powered Image Restoration</h1>
           <p className="hero-subtitle">
             Restore vintage and damaged photographs using Non-Local Means denoising,
             adaptive CLAHE contrast recovery, Laplacian sharpening, and Caffe deep learning colorization.
@@ -69,7 +69,7 @@ export const App: React.FC = () => {
           color: "var(--text-muted)",
         }}
       >
-        AI Photo Restoration & Colorization Studio • OpenCV & Deep Learning • FastAPI & React
+        PixelRevive – AI-Powered Image Restoration • OpenCV & Deep Learning • FastAPI & React
       </footer>
 
       <AboutModal

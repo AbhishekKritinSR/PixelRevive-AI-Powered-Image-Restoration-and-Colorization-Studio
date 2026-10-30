@@ -27,8 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
             <Sparkles size={20} />
           </div>
           <div>
-            <div className="logo-title">AI Photo Studio</div>
-            <div className="logo-subtitle">Restoration & Colorization</div>
+            <div className="logo-title">PixelRevive</div>
+            <div className="logo-subtitle">AI-Powered Image Restoration</div>
           </div>
         </div>
 

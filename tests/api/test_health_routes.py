@@ -23,7 +23,7 @@ class TestHealthEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["application"] == "AI Photo Restoration & Colorization Studio"
+        assert data["application"] == "PixelRevive – AI-Powered Image Restoration"
         assert data["version"] == "1.0.0"
         assert data["device"] in ("CPU", "CUDA")
 

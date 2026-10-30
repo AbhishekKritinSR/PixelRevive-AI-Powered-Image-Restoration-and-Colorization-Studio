@@ -1,10 +1,10 @@
-# AI PHOTO RESTORATION & COLORIZATION STUDIO
+# PIXELREVIVE – AI-POWERED IMAGE RESTORATION
 ## Phase 3: Comprehensive Technical Engineering, Architecture & Deep Source-Code Audit Report
 ### Production-Grade React 18 + TypeScript Frontend Development & FastAPI REST API Integration
 
 ---
 
-**Project Title:** AI Photo Restoration & Colorization Studio  
+**Project Title:** PixelRevive – AI-Powered Image Restoration  
 **Document Type:** Master Technical Project Report & Software Engineering Documentation  
 **Development Phase:** Phase 3 – React + TypeScript Frontend Development  
 **Operating Environment:** Windows 11 / Windows PowerShell  

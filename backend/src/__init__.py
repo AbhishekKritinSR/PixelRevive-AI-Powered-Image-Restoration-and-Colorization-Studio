@@ -1,2 +1,2 @@
-"""Backend source package for AI Photo Restoration & Colorization Studio."""
+"""Backend source package for PixelRevive – AI-Powered Image Restoration."""
 

@@ -25,7 +25,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({
               <Sparkles size={18} />
             </div>
             <div>
-              <div style={{ fontSize: "1.125rem", fontWeight: 700 }}>About AI Photo Studio</div>
+              <div style={{ fontSize: "1.125rem", fontWeight: 700 }}>About PixelRevive</div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Architecture & Pipeline Overview</div>
             </div>
           </div>
@@ -45,7 +45,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({
 
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.875rem", color: "var(--text-secondary)", lineHeight: "1.6" }}>
           <p>
-            <strong style={{ color: "var(--text-primary)" }}>AI Photo Restoration & Colorization Studio</strong> is a modular,
+            <strong style={{ color: "var(--text-primary)" }}>PixelRevive – AI-Powered Image Restoration</strong> is a modular,
             production-grade computer vision application designed to restore aged, degraded, noisy, and black-and-white
             photographs.
           </p>
