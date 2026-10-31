@@ -8,7 +8,12 @@ Provides independent modules for:
 - Restoration pipeline orchestration (restorer.py)
 """
 
-from .contrast import enhance_contrast
+from .contrast import (
+    ContrastParameters,
+    adaptive_enhance_contrast,
+    enhance_contrast,
+    evaluate_contrast_protection,
+)
 from .denoiser import (
     DenoiseParameters,
     adaptive_denoise_image,
@@ -21,7 +26,12 @@ from .scratch_repair import (
     detect_scratch_mask,
     repair_scratches,
 )
-from .sharpener import sharpen_image
+from .sharpener import (
+    SharpenParameters,
+    adaptive_sharpen_image,
+    evaluate_sharpen_protection,
+    sharpen_image,
+)
 from .super_resolution import (
     SuperResolutionMetadata,
     get_model_spec,
@@ -35,7 +45,13 @@ __all__ = [
     "select_denoising_parameters",
     "adaptive_denoise_image",
     "denoise_image",
+    "ContrastParameters",
+    "adaptive_enhance_contrast",
+    "evaluate_contrast_protection",
     "enhance_contrast",
+    "SharpenParameters",
+    "adaptive_sharpen_image",
+    "evaluate_sharpen_protection",
     "sharpen_image",
     "enhance_image",
     "ScratchRepairMetadata",

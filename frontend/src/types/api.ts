@@ -48,6 +48,8 @@ export interface RestorationOptions {
   sharpen: boolean;
   colorize: boolean;
   adaptive_denoise?: boolean;
+  adaptive_contrast?: boolean;
+  adaptive_sharpen?: boolean;
   repair?: boolean;
   inpaint_method?: "lama" | "telea" | "ns";
   face_restore?: boolean;

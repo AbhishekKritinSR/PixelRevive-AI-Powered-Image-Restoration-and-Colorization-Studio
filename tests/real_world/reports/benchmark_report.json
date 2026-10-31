@@ -1,7 +1,7 @@
 {
   "benchmark_suite": "PixelRevive Phase 3 Quality & Algorithmic Validation",
-  "timestamp": "2026-10-31T20:06:49Z",
-  "total_duration_seconds": 28.81,
+  "timestamp": "2026-10-31T20:46:47Z",
+  "total_duration_seconds": 27.92,
   "all_benchmarks_passed": true,
   "categories": {
     "category_a": {
@@ -22,12 +22,12 @@
       "telea_results": {
         "psnr_db": 21.22,
         "ssim": 0.9111,
-        "latency_ms": 1.63
+        "latency_ms": 1.79
       },
       "lama_results": {
         "psnr_db": 21.4,
         "ssim": 0.9154,
-        "latency_ms": 21470.23,
+        "latency_ms": 21267.75,
         "method_applied": "lama"
       }
     },
@@ -45,7 +45,7 @@
         "denoised_ssim": 0.9649,
         "psnr_improvement_db": 9.92,
         "ssim_improvement": 0.6161,
-        "latency_ms": 230.96
+        "latency_ms": 233.26
       },
       "texture_guided_residual_analysis": {
         "flat_region_noise_std_before": 15.09,
@@ -67,7 +67,7 @@
         "contrast_before": 30.68,
         "contrast_after": 31.93,
         "contrast_delta": 1.25,
-        "latency_ms": 5.55
+        "latency_ms": 5.84
       }
     },
     "category_d": {
@@ -81,7 +81,7 @@
         "colorfulness_before": 0.0,
         "colorfulness_after": 32.53,
         "model_architecture": "Zhang et al. ECCV 2016 Caffe + NaturalChrominanceRefiner",
-        "latency_ms": 479.98
+        "latency_ms": 474.87
       }
     },
     "category_e": {
@@ -89,14 +89,14 @@
       "bicubic_baseline": {
         "psnr_db": 26.79,
         "ssim": 0.9084,
-        "latency_ms": 0.17
+        "latency_ms": 8.7
       },
       "fsrcnn_x2": {
         "psnr_db": 26.56,
         "ssim": 0.906,
         "psnr_gain_over_bicubic_db": -0.23,
         "ssim_gain_over_bicubic": -0.0024,
-        "latency_ms": 16.75
+        "latency_ms": 22.24
       },
       "realesrgan_x4": {
         "output_shape": [
@@ -104,7 +104,7 @@
           256,
           3
         ],
-        "latency_ms": 2783.72,
+        "latency_ms": 2716.17,
         "execution_provider": "CPUExecutionProvider (pure CPU)"
       }
     },
@@ -115,17 +115,17 @@
         "ssim": 0.4574
       },
       "restored_metrics": {
-        "psnr_db": 16.12,
-        "ssim": 0.4387,
-        "psnr_gain_db": -6.29,
-        "ssim_gain": -0.0187,
-        "total_latency_ms": 2378.39
+        "psnr_db": 23.48,
+        "ssim": 0.8892,
+        "psnr_gain_db": 1.07,
+        "ssim_gain": 0.4318,
+        "total_latency_ms": 2289.33
       },
       "pipeline_summary": {
         "scratch_repair": "Applied: 1415 damaged pixels reconstructed (2.16%) using LAMA.",
         "denoising": "Applied: adaptive Non-Local Means (sigma=8.46, level=medium, h=7.0) with texture-guided residual blending.",
-        "contrast": "Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel.",
-        "sharpening": "Applied: unity-gain high-pass Laplacian sharpening for edge recovery."
+        "contrast": "Bypassed: image exhibits adequate natural contrast (std=26.4 >= 22.0, dynamic range=144.0 >= 65.0). CLAHE skipped to prevent over-enhancement.",
+        "sharpening": "Bypassed: image already exhibits sufficient edge sharpness (Laplacian variance=1432.0 >= 120.0). Sharpening skipped to prevent haloing."
       }
     },
     "category_g": {
@@ -146,57 +146,70 @@
       "preservation_metrics": {
         "ssim": 1.0,
         "psnr_db": 361.2,
+        "mae": 0.0,
+        "max_ae": 0,
+        "changed_pixels": 0,
+        "total_pixels": 65536,
+        "changed_percentage": 0.0,
+        "luminance_std": 25.55,
+        "laplacian_var": 0.65,
+        "noise_sigma": 0.02,
+        "noise_level": "low",
         "target_ssim_threshold": 0.94,
         "protection_passed": true
       },
       "decision_log": {
         "scratch_repair": "Bypassed: no significant scratch or surface defects detected.",
-        "denoising": "Bypassed: measured noise variance is pristine (sigma=0.01 < 1.5). Filtering skipped to preserve photographic clarity."
+        "denoising": "Bypassed: measured noise variance is pristine (sigma=0.01 < 1.5). Filtering skipped to preserve photographic clarity.",
+        "contrast": "Bypassed: image exhibits adequate natural contrast (std=25.6 >= 22.0, dynamic range=69.0 >= 65.0). CLAHE skipped to prevent over-enhancement.",
+        "sharpening": "Bypassed: pristine continuous-tone image (noise sigma=0.02 < 1.5, edge grad=8.0 < 15.0). Sharpening skipped to preserve smooth tones."
       },
       "safeguards_triggered": {
         "scratch_repair_bypassed": true,
-        "denoising_bypassed": true
+        "denoising_bypassed": true,
+        "contrast_bypassed": true,
+        "sharpening_bypassed": true
       }
     }
   },
   "real_world_inputs_evaluated": [
     {
       "filename": "archival_portrait_damaged.png",
-      "elapsed_seconds": 0.247,
+      "elapsed_seconds": 0.256,
       "metrics": {
-        "sharpness": 45082.43,
-        "contrast": 60.21,
-        "brightness": 110.16,
-        "sharpness_delta": 40032.38,
-        "contrast_delta": 23.56,
+        "sharpness": 3423.83,
+        "contrast": 35.44,
+        "brightness": 93.77,
+        "sharpness_delta": -1626.21,
+        "contrast_delta": -1.21,
         "device": "CPU",
-        "elapsed_seconds": 0.247
+        "elapsed_seconds": 0.256
       },
       "operations_summary": {
         "scratch_repair": "Bypassed: no significant scratch or surface defects detected.",
         "denoising": "Applied: adaptive Non-Local Means (sigma=10.94, level=high, h=12.0) with texture-guided residual blending.",
-        "contrast": "Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel.",
-        "sharpening": "Applied: unity-gain high-pass Laplacian sharpening for edge recovery.",
+        "contrast": "Bypassed: image exhibits adequate natural contrast (std=35.4 >= 22.0, dynamic range=209.0 >= 65.0). CLAHE skipped to prevent over-enhancement.",
+        "sharpening": "Bypassed: image already exhibits sufficient edge sharpness (Laplacian variance=3423.8 >= 120.0). Sharpening skipped to prevent haloing.",
         "colorization": "Bypassed: input is already a natural color photograph (chromatic variance=16.6 >= 6.0). Authentic colors preserved."
       }
     },
     {
       "filename": "historical_faded_monochrome.png",
-      "elapsed_seconds": 2.346,
+      "elapsed_seconds": 2.251,
       "metrics": {
-        "sharpness": 4258.31,
-        "contrast": 30.93,
-        "brightness": 111.17,
-        "sharpness_delta": 4144.59,
-        "contrast_delta": 11.03,
+        "sharpness": 209.34,
+        "contrast": 26.25,
+        "brightness": 110.47,
+        "sharpness_delta": 95.62,
+        "contrast_delta": 6.35,
         "device": "CPU",
-        "elapsed_seconds": 2.346
+        "elapsed_seconds": 2.251
       },
       "operations_summary": {
         "scratch_repair": "Applied: 182 damaged pixels reconstructed (0.23%) using LAMA.",
         "denoising": "Bypassed: measured noise variance is pristine (sigma=0.28 < 1.5). Filtering skipped to preserve photographic clarity.",
-        "contrast": "Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel.",
-        "sharpening": "Applied: unity-gain high-pass Laplacian sharpening for edge recovery.",
+        "contrast": "Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel (low dynamic range: std=19.9 < 22.0, dynamic range=60.0 < 65.0).",
+        "sharpening": "Bypassed: image already exhibits sufficient edge sharpness (Laplacian variance=208.5 >= 120.0). Sharpening skipped to prevent haloing.",
         "colorization": "Applied: deep neural colorization using zhang_caffe with guided chrominance refinement."
       }
     }

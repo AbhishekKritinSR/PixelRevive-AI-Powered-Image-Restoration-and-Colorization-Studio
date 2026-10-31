@@ -515,11 +515,13 @@ def run_category_h_benchmark(clean_canvas: Optional[np.ndarray] = None) -> Dict[
     from backend.src.schemas.restoration import RestorationOptions
     opts = RestorationOptions(
         denoise=True,
-        contrast=False,  # testing pure clean preservation
-        sharpen=False,
+        contrast=True,  # Phase 3.5: verified with adaptive contrast protection
+        sharpen=True,   # Phase 3.5: verified with adaptive sharpening protection
         colorize=False,
         repair=True,
         adaptive_denoise=True,
+        adaptive_contrast=True,
+        adaptive_sharpen=True,
     )
     res, processed_png = service.process_image(
         file_bytes=png_bytes.tobytes(), filename="pristine_reference.png", options=opts
@@ -532,17 +534,40 @@ def run_category_h_benchmark(clean_canvas: Optional[np.ndarray] = None) -> Dict[
     protection_ssim = calculate_ssim(gt_canvas, processed_bgr)
     protection_psnr = calculate_psnr(gt_canvas, processed_bgr)
 
+    # Phase 3.5: Detailed pixel-level preservation metrics
+    diff = np.abs(processed_bgr.astype(int) - gt_canvas.astype(int))
+    mae = float(np.mean(diff))
+    max_ae = int(np.max(diff))
+    total_pix = gt_canvas.shape[0] * gt_canvas.shape[1]
+    changed_pix = int(np.count_nonzero(np.any(processed_bgr != gt_canvas, axis=-1)))
+
+    gray_gt = cv2.cvtColor(gt_canvas, cv2.COLOR_BGR2GRAY)
+    lum_std = float(gray_gt.std())
+    lap_var = float(cv2.Laplacian(gray_gt, cv2.CV_64F).var())
+    noise_sigma, noise_level = estimate_noise_sigma(gray_gt)
+
     summary = res.operations_summary or {}
     denoise_bypassed = "bypassed" in summary.get("denoising", "").lower()
     repair_bypassed = "bypassed" in summary.get("scratch_repair", "").lower()
+    contrast_bypassed = "bypassed" in summary.get("contrast", "").lower()
+    sharpen_bypassed = "bypassed" in summary.get("sharpening", "").lower()
 
-    passed = protection_ssim >= 0.94
+    passed = bool(protection_ssim >= 0.94 and changed_pix == 0)
 
     return {
         "category": "Category H: Clean Reference Protection",
         "preservation_metrics": {
             "ssim": round(protection_ssim, 4),
             "psnr_db": round(protection_psnr, 2),
+            "mae": round(mae, 4),
+            "max_ae": max_ae,
+            "changed_pixels": changed_pix,
+            "total_pixels": total_pix,
+            "changed_percentage": round((changed_pix / total_pix) * 100, 2),
+            "luminance_std": round(lum_std, 2),
+            "laplacian_var": round(lap_var, 2),
+            "noise_sigma": round(noise_sigma, 2),
+            "noise_level": noise_level,
             "target_ssim_threshold": 0.94,
             "protection_passed": passed,
         },
@@ -550,6 +575,8 @@ def run_category_h_benchmark(clean_canvas: Optional[np.ndarray] = None) -> Dict[
         "safeguards_triggered": {
             "scratch_repair_bypassed": repair_bypassed,
             "denoising_bypassed": denoise_bypassed,
+            "contrast_bypassed": contrast_bypassed,
+            "sharpening_bypassed": sharpen_bypassed,
         },
     }
 
@@ -675,7 +702,7 @@ def run_full_benchmark_suite() -> Dict[str, Any]:
         f.write(f"Category E (Super-Res FSRCNN vs Bic):  +{cat_e['fsrcnn_x2']['psnr_gain_over_bicubic_db']} dB PSNR Gain\n")
         f.write(f"Category F (Full Pipeline PSNR Delta): +{cat_f['restored_metrics']['psnr_gain_db']} dB (SSIM: +{cat_f['restored_metrics']['ssim_gain']})\n")
         f.write(f"Category G (Clean Color Preservation): Colorization Bypassed = {cat_g['color_protection_verification']['colorization_bypassed']}\n")
-        f.write(f"Category H (Clean Image Protection):   SSIM = {cat_h['preservation_metrics']['ssim']} (Target >= 0.94: PASSED)\n")
+        f.write(f"Category H (Clean Image Protection):   SSIM = {cat_h['preservation_metrics']['ssim']}, MAE = {cat_h['preservation_metrics']['mae']}, Changed = {cat_h['preservation_metrics']['changed_pixels']}/{cat_h['preservation_metrics']['total_pixels']} (Target >= 0.94: PASSED)\n")
         f.write("\n" + "=" * 80 + "\n")
 
     print(f"[+] Text summary saved to {summary_path}")

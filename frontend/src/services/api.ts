@@ -175,6 +175,8 @@ export async function restoreSingleImage(
   formData.append("sharpen", String(options.sharpen));
   formData.append("colorize", String(options.colorize));
   formData.append("adaptive_denoise", String(options.adaptive_denoise ?? true));
+  formData.append("adaptive_contrast", String(options.adaptive_contrast ?? true));
+  formData.append("adaptive_sharpen", String(options.adaptive_sharpen ?? true));
   formData.append("repair", String(options.repair ?? false));
   formData.append("upscale", String(options.upscale ?? false));
   formData.append("scale", String(options.scale ?? 2));
@@ -221,6 +223,8 @@ export async function restoreBatchImages(
   formData.append("sharpen", String(options.sharpen));
   formData.append("colorize", String(options.colorize));
   formData.append("adaptive_denoise", String(options.adaptive_denoise ?? true));
+  formData.append("adaptive_contrast", String(options.adaptive_contrast ?? true));
+  formData.append("adaptive_sharpen", String(options.adaptive_sharpen ?? true));
   formData.append("repair", String(options.repair ?? false));
   formData.append("upscale", String(options.upscale ?? false));
   formData.append("scale", String(options.scale ?? 2));

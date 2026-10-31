@@ -178,6 +178,8 @@ class RestorationService:
             contrast=options.contrast,
             sharpen=options.sharpen,
             adaptive_denoise=options.adaptive_denoise,
+            adaptive_contrast=getattr(options, "adaptive_contrast", True),
+            adaptive_sharpen=getattr(options, "adaptive_sharpen", True),
             repair=options.repair,
             inpaint_method=getattr(options, "inpaint_method", "lama"),
             face_restore=getattr(options, "face_restore", False),

@@ -36,11 +36,11 @@ from typing import Dict, Tuple, Union
 
 import numpy as np
 
-from .contrast import enhance_contrast
+from .contrast import adaptive_enhance_contrast, enhance_contrast
 from .denoiser import adaptive_denoise_image, denoise_image
 from .face_restorer import FaceRestorer
 from .scratch_repair import repair_scratches
-from .sharpener import sharpen_image
+from .sharpener import adaptive_sharpen_image, sharpen_image
 from .super_resolution import upscale_image
 
 
@@ -50,6 +50,8 @@ def enhance_image(
     contrast: bool = True,
     sharpen: bool = True,
     adaptive_denoise: bool = True,
+    adaptive_contrast: bool = True,
+    adaptive_sharpen: bool = True,
     repair: bool = False,
     upscale: bool = False,
     scale: int = 2,
@@ -84,6 +86,12 @@ def enhance_image(
         adaptive_denoise:
             Whether to adaptively select denoising strength based on image noise.
             Default is True. If False, uses fixed Non-Local Means parameters.
+        adaptive_contrast:
+            Whether to adaptively evaluate dynamic range to bypass CLAHE on images
+            with adequate natural contrast. Default is True.
+        adaptive_sharpen:
+            Whether to adaptively evaluate sharpness and noise to bypass sharpening
+            on crisp or high-noise images. Default is True.
         repair:
             Whether to detect archival scratches and reconstruct them.
             Default is False (disabled by default for full backward compatibility).
@@ -143,10 +151,18 @@ def enhance_image(
             )
 
     if contrast:
-        result = enhance_contrast(result)
-        summary["contrast"] = (
-            "Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel."
-        )
+        if adaptive_contrast:
+            enhanced_contrast, contrast_params = adaptive_enhance_contrast(result)
+            summary["contrast"] = contrast_params.reason
+            if not contrast_params.skip:
+                result = enhanced_contrast
+        else:
+            result = enhance_contrast(result)
+            summary["contrast"] = (
+                "Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel."
+            )
+    else:
+        summary["contrast"] = "Bypassed: contrast enhancement was not requested by client option."
 
     if face_restore:
         restored, face_count = FaceRestorer.restore_faces(result)
@@ -161,10 +177,18 @@ def enhance_image(
             )
 
     if sharpen:
-        result = sharpen_image(result)
-        summary["sharpening"] = (
-            "Applied: unity-gain high-pass Laplacian sharpening for edge recovery."
-        )
+        if adaptive_sharpen:
+            sharpened, sharpen_params = adaptive_sharpen_image(result)
+            summary["sharpening"] = sharpen_params.reason
+            if not sharpen_params.skip:
+                result = sharpened
+        else:
+            result = sharpen_image(result)
+            summary["sharpening"] = (
+                "Applied: unity-gain high-pass Laplacian sharpening for edge recovery."
+            )
+    else:
+        summary["sharpening"] = "Bypassed: sharpening was not requested by client option."
 
     if upscale:
         result, _ = upscale_image(result, scale=scale, model=sr_model)

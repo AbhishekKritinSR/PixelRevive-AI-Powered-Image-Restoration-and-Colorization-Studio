@@ -21,6 +21,14 @@ class RestorationOptions(BaseModel):
         default=True,
         description="Whether to intelligently adapt denoising strength based on image noise level (when denoise=True)",
     )
+    adaptive_contrast: bool = Field(
+        default=True,
+        description="Whether to adaptively evaluate image contrast and bypass CLAHE on images with adequate natural dynamic range (when contrast=True)",
+    )
+    adaptive_sharpen: bool = Field(
+        default=True,
+        description="Whether to adaptively evaluate sharpness and noise to bypass unnecessary sharpening on sharp or pristine images (when sharpen=True)",
+    )
     repair: bool = Field(
         default=False,
         description="Enable archival scratch repair and inpainting",

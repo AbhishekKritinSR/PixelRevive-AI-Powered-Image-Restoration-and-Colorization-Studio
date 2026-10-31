@@ -36,6 +36,14 @@ def process_single_image(
         default=True,
         description="Intelligently adapt denoising strength based on estimated image noise level (when denoise is True)",
     ),
+    adaptive_contrast: bool = Form(
+        default=True,
+        description="Intelligently adapt contrast enhancement based on measured dynamic range (when contrast is True)",
+    ),
+    adaptive_sharpen: bool = Form(
+        default=True,
+        description="Intelligently adapt sharpening based on measured sharpness and noise (when sharpen is True)",
+    ),
     repair: bool = Form(
         default=False,
         description="Apply archival scratch detection and inpainting",
@@ -91,6 +99,8 @@ def process_single_image(
         sharpen=sharpen,
         colorize=colorize,
         adaptive_denoise=adaptive_denoise,
+        adaptive_contrast=adaptive_contrast,
+        adaptive_sharpen=adaptive_sharpen,
         repair=repair,
         inpaint_method=inpaint_method,
         face_restore=face_restore,
