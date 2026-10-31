@@ -6,10 +6,13 @@ modular implementations from `backend.src.processing.restoration`.
 
 from backend.src.processing.restoration import (
     DenoiseParameters,
+    ScratchRepairMetadata,
     adaptive_denoise_image,
     denoise_image,
+    detect_scratch_mask,
     enhance_contrast,
     enhance_image,
+    repair_scratches,
     select_denoising_parameters,
     sharpen_image,
 )
@@ -22,4 +25,7 @@ __all__ = [
     "enhance_contrast",
     "sharpen_image",
     "enhance_image",
+    "ScratchRepairMetadata",
+    "detect_scratch_mask",
+    "repair_scratches",
 ]

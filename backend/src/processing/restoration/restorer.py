@@ -36,6 +36,7 @@ import numpy as np
 
 from .contrast import enhance_contrast
 from .denoiser import adaptive_denoise_image, denoise_image
+from .scratch_repair import repair_scratches
 from .sharpener import sharpen_image
 
 
@@ -45,13 +46,15 @@ def enhance_image(
     contrast: bool = True,
     sharpen: bool = True,
     adaptive_denoise: bool = True,
+    repair: bool = False,
 ) -> np.ndarray:
     """Run the classical restoration pipeline on a BGR uint8 image.
 
     The stages execute in strict sequence:
-        1. Denoise (smooths noise while preserving major edges, fixed or adaptive)
-        2. Contrast (enhances local dynamic range on cleaned signal)
-        3. Sharpen (restores micro-edge definition smoothed by denoising)
+        1. Repair (detects and inpaints archival scratches/defects if enabled)
+        2. Denoise (smooths noise and inpainting boundaries, fixed or adaptive)
+        3. Contrast (enhances local dynamic range on cleaned signal)
+        4. Sharpen (restores micro-edge definition smoothed by denoising)
 
     Each stage can be independently enabled or disabled. Disabled stages
     are bypassed completely with zero computational overhead.
@@ -68,11 +71,17 @@ def enhance_image(
         adaptive_denoise:
             Whether to adaptively select denoising strength based on image noise.
             Default is True. If False, uses fixed Non-Local Means parameters.
+        repair:
+            Whether to detect archival scratches and reconstruct them with OpenCV inpainting.
+            Default is False (disabled by default for full backward compatibility).
 
     Returns:
         Restored BGR image as a uint8 NumPy array.
     """
     result = image
+
+    if repair:
+        result, _ = repair_scratches(result)
 
     if denoise:
         if adaptive_denoise:

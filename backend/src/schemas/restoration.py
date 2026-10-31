@@ -20,6 +20,10 @@ class RestorationOptions(BaseModel):
         default=True,
         description="Whether to intelligently adapt denoising strength based on image noise level (when denoise=True)",
     )
+    repair: bool = Field(
+        default=False,
+        description="Enable archival scratch repair and inpainting",
+    )
 
 
 class SingleRestorationResponse(BaseModel):

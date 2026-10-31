@@ -35,6 +35,10 @@ def process_single_image(
         default=True,
         description="Intelligently adapt denoising strength based on estimated image noise level (when denoise is True)",
     ),
+    repair: bool = Form(
+        default=False,
+        description="Apply archival scratch detection and inpainting",
+    ),
     restoration_service: RestorationService = Depends(get_restoration_service),
 ) -> SingleRestorationResponse:
     """Restore and colorize an individual photograph.
@@ -50,6 +54,7 @@ def process_single_image(
         sharpen=sharpen,
         colorize=colorize,
         adaptive_denoise=adaptive_denoise,
+        repair=repair,
     )
 
     response, _ = restoration_service.process_image(

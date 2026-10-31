@@ -63,6 +63,28 @@ class TestRestorationEndpoints:
         assert "metrics" in json_data
         assert json_data["options_applied"]["colorize"] is False
         assert json_data["options_applied"]["adaptive_denoise"] is True
+        assert json_data["options_applied"]["repair"] is False
+
+    def test_process_single_image_repair_toggles(self, valid_png_bytes):
+        # 1. Explicit repair=false
+        files = {"file": ("test_photo.png", valid_png_bytes, "image/png")}
+        data = {
+            "denoise": "false",
+            "contrast": "false",
+            "sharpen": "false",
+            "colorize": "false",
+            "repair": "false",
+        }
+        res_false = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert res_false.status_code == 200
+        assert res_false.json()["options_applied"]["repair"] is False
+
+        # 2. Explicit repair=true
+        files = {"file": ("test_photo.png", valid_png_bytes, "image/png")}
+        data["repair"] = "true"
+        res_true = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert res_true.status_code == 200
+        assert res_true.json()["options_applied"]["repair"] is True
 
     def test_process_single_image_adaptive_denoise_explicit(self, valid_png_bytes):
         files = {"file": ("test_photo.png", valid_png_bytes, "image/png")}

@@ -82,3 +82,24 @@ class TestBatchEndpoints:
         assert json_data["items"][1]["status"] == "success"
         assert json_data["zip_base64"].startswith("data:application/zip;base64,")
 
+    def test_process_batch_with_repair(self, sample_png):
+        files = [
+            ("files", ("batch_img1.png", sample_png, "image/png")),
+            ("files", ("batch_img2.png", sample_png, "image/png")),
+        ]
+        data = {
+            "denoise": "false",
+            "contrast": "false",
+            "sharpen": "false",
+            "colorize": "false",
+            "repair": "true",
+        }
+        response = client.post("/api/v1/restoration/batch", files=files, data=data)
+        assert response.status_code == 200
+        json_data = response.json()
+        assert json_data["total_succeeded"] == 2
+        assert len(json_data["items"]) == 2
+        assert json_data["items"][0]["status"] == "success"
+        assert json_data["items"][1]["status"] == "success"
+        assert json_data["zip_base64"].startswith("data:application/zip;base64,")
+

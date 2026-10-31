@@ -162,13 +162,14 @@ class RestorationService:
         # 3. Convert RGB -> BGR for OpenCV processing
         bgr = cv2.cvtColor(processed_input_rgb, cv2.COLOR_RGB2BGR)
 
-        # 4. Classical restoration stages (denoise, contrast, sharpen)
+        # 4. Classical restoration stages (repair, denoise, contrast, sharpen)
         enhanced_bgr = enhance_image(
             bgr,
             denoise=options.denoise,
             contrast=options.contrast,
             sharpen=options.sharpen,
             adaptive_denoise=options.adaptive_denoise,
+            repair=options.repair,
         )
 
         # 5. AI Colorization stage

@@ -53,7 +53,8 @@ flowchart TD
 - **Batch Processing**: Concurrently upload up to 10 images with individual progress tracking, individual downloads, and combined ZIP download.
 - **Production Validation**: Strict validation for image format (`.jpg`, `.jpeg`, `.png`, `.webp`), mime-type, 25 MB payload limit, and automatic aspect-preserving downscaling for images exceeding 1600px.
 - **Real-Time Quality Metrics**: Execution latency breakdown (ms), inference device detection (CPU/CUDA), and before/after heuristic contrast and sharpness deltas.
-- **Exhaustive Automated Test Suite**: 140 automated unit, integration, and route validation tests with 100% pass rate.
+- **Archival Scratch Repair & Inpainting**: Multi-orientation morphological detection (horizontal, vertical, diagonal) and OpenCV inpainting (`INPAINT_TELEA`) with safety coverage guards and ridge vs step-edge false-positive rejection.
+- **Exhaustive Automated Test Suite**: 165 automated unit, integration, and route validation tests with 100% pass rate.
 
 ---
 
@@ -61,6 +62,7 @@ flowchart TD
 
 1. **Preprocessing**: Validates upload headers and dimensions, normalizes orientations, and resizes images exceeding 1600px on the longest axis while preserving aspect ratio.
 2. **Classical Restoration**:
+   - **Archival Scratch Repair & Inpainting (Optional)**: When `repair=true`, detects thin localized scratches and emulsion cracks using directional morphological black-hat and white-hat operators (horizontal, vertical, ~45°, ~135°). Geometric connected-component analysis and neighborhood interquartile range (IQR) checks reject step edges, eyes, hair, and textured patterns. Reconstructs defects using OpenCV Telea Fast Marching Method (`cv2.INPAINT_TELEA`, radius 2–5 px). Disabled by default (`repair=false`) to preserve genuine image details. Includes a 5% coverage safety guard that skips inpainting if marked area exceeds safe limits.
    - **Adaptive Denoising**: Intelligently measures image noise variance ($\hat{\sigma}$) via an Immerkær Laplacian residual operator; skips/minimizes filtering on clean images to preserve micro-textures ($h=0$ to $3$), and applies adaptive Non-Local Means ($h=7$ to $16$) on noisy inputs.
    - **Contrast Enhancement**: Contrast Limited Adaptive Histogram Equalization (CLAHE) applied specifically to the lightness ($L$) channel in LAB color space, avoiding artificial color saturation.
    - **Sharpening**: Unity-gain Laplacian kernel restores fine micro-contrasts lost during denoising without introducing clipping or brightness drift.
@@ -191,18 +193,23 @@ npm run dev
 
 ## Testing & Quality Assurance
 
-### Backend Test Suite (84 Tests)
+### Backend Test Suite (165 Tests)
 
 Run all unit, pipeline, and API endpoint tests:
 
 ```bash
 pytest -v
+
+# Run scratch repair test suite specifically:
+pytest tests/unit/test_scratch_repair.py -v
 ```
 
 Test coverage includes:
-- Independent enhancement filters (Denoise, CLAHE, Sharpening unity-gain invariant).
+- Archival scratch detection, directional morphology, ridge validation, and OpenCV inpainting (`INPAINT_TELEA` / `INPAINT_NS`).
+- Adaptive Non-Local Means denoising, noise variance heuristics, and texture preservation.
+- Classical enhancement filters (CLAHE contrast, Laplacian sharpening unity-gain invariant).
 - Colorization model loading, fallback handling, and output tensor contracts.
-- FastAPI REST endpoints: validation errors (400, 413, 422), health checks, model status, single and batch processing.
+- FastAPI REST endpoints: validation errors (400, 413, 422), health checks, model status, single and batch processing with `repair=true`/`repair=false`.
 
 ### Frontend Type-Check & Build Verification
 

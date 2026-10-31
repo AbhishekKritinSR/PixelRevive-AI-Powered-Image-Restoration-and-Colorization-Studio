@@ -1,6 +1,7 @@
 """Classical digital image restoration subpackage.
 
 Provides independent modules for:
+- Archival scratch detection and inpainting (scratch_repair.py)
 - Non-Local Means image denoising (denoiser.py)
 - CLAHE contrast enhancement in LAB space (contrast.py)
 - Unity-gain Laplacian image sharpening (sharpener.py)
@@ -15,6 +16,11 @@ from .denoiser import (
     select_denoising_parameters,
 )
 from .restorer import enhance_image
+from .scratch_repair import (
+    ScratchRepairMetadata,
+    detect_scratch_mask,
+    repair_scratches,
+)
 from .sharpener import sharpen_image
 
 __all__ = [
@@ -25,5 +31,8 @@ __all__ = [
     "enhance_contrast",
     "sharpen_image",
     "enhance_image",
+    "ScratchRepairMetadata",
+    "detect_scratch_mask",
+    "repair_scratches",
 ]
 

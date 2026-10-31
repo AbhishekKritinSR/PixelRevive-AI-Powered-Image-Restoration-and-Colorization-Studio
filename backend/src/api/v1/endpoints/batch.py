@@ -35,6 +35,10 @@ def process_batch_images(
         default=True,
         description="Intelligently adapt denoising strength based on estimated image noise level (when denoise is True)",
     ),
+    repair: bool = Form(
+        default=False,
+        description="Apply archival scratch detection and inpainting",
+    ),
     batch_service: BatchService = Depends(get_batch_service),
 ) -> BatchRestorationResponse:
     """Process multiple photographs in a batch.
@@ -47,6 +51,7 @@ def process_batch_images(
         sharpen=sharpen,
         colorize=colorize,
         adaptive_denoise=adaptive_denoise,
+        repair=repair,
     )
 
     files_data = [(f.filename or f"image_{idx}.png", f.file.read()) for idx, f in enumerate(files)]
