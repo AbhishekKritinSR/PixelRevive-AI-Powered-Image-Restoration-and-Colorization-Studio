@@ -22,6 +22,7 @@ Dependencies:
 """
 
 import base64
+from pathlib import Path
 import time
 from typing import List, Tuple
 
@@ -98,7 +99,8 @@ class BatchService:
                     )
                 )
                 # Prepare filename for ZIP bundling
-                out_name = f"restored_{filename}"
+                safe_basename = Path(filename).name
+                out_name = f"restored_{safe_basename}"
                 if not out_name.lower().endswith(".png"):
                     out_name = f"{out_name}.png"
                 succeeded_pngs.append((out_name, png_bytes))

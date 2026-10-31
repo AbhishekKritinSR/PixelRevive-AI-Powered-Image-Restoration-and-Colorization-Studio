@@ -57,7 +57,7 @@ flowchart TD
 - **AI Super-Resolution**: Optional 2× and 4× image upscaling via OpenCV DNN Super Resolution using pre-trained FSRCNN models, protected by strict 4096px dimension and 12 MP memory safety budgets.
 - **Colorization Tuning & Model Registry**: Configurable rendering factor ($10 \le \text{render\_factor} \le 40$, default 14) controlling internal network resolution, paired with an extensible, thread-safe `ColorizerFactory` supporting structured model metadata discovery and singleton reuse.
 - **Advanced Image Quality Assessment**: Multi-metric evaluation subsystem featuring no-reference BRISQUE perceptual distortion scoring, reference-based Structural Similarity Index (SSIM) with per-channel breakdown, and Hasler-Süsstrunk chromatic dispersion measurement.
-- **Exhaustive Automated Test Suite**: 247 automated unit, integration, and route validation tests with 100% pass rate.
+- **Exhaustive Automated Test Suite**: 248 automated unit, integration, and route validation tests with 100% pass rate.
 
 ---
 
@@ -203,7 +203,7 @@ npm run dev
 
 ## Testing & Quality Assurance
 
-### Backend Test Suite (247 Tests)
+### Backend Test Suite (248 Tests)
 
 Run all unit, pipeline, and API endpoint tests:
 

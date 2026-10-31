@@ -256,7 +256,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                   <strong>Structural Similarity Index (SSIM)</strong>
                 </div>
                 <span className="badge badge-success" style={{ fontSize: "0.6875rem" }}>
-                  Range: 0.0 – 1.0 (Higher is Better)
+                  Range: [-1.0, 1.0] (1.0 = Identical Structure)
                 </span>
               </div>
 
@@ -338,13 +338,14 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                     <div
                       style={{
                         fontSize: "0.75rem",
-                        color: "var(--success)",
+                        color: "var(--accent-secondary)",
                         fontWeight: 600,
                         marginBottom: "0.35rem",
                       }}
                     >
-                      Colorfulness shift: +{(colorRest.score - colorOrig.score).toFixed(2)} (
-                      {colorRest.score > 15 ? "Vibrant chromatic recovery" : "Subtle chromatic shift"})
+                      Chromatic dispersion delta: {colorRest.score >= colorOrig.score ? "+" : ""}
+                      {(colorRest.score - colorOrig.score).toFixed(2)} (measures opponent channel variance;
+                      not historical color accuracy)
                     </div>
                   )}
 
@@ -412,7 +413,7 @@ export const QualityDashboard: React.FC<QualityDashboardProps> = ({
                       </td>
                       <td style={{ fontFamily: "var(--font-mono)" }}>
                         {ssimRest?.score !== null && ssimRest?.score !== undefined
-                          ? `${(ssimRest.score * 100).toFixed(1)}% match`
+                          ? `Fidelity: ${ssimRest.score.toFixed(4)}`
                           : "—"}
                       </td>
                       <td style={{ fontSize: "0.75rem" }}>
