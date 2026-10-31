@@ -2,283 +2,234 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://github.com/vishalkoripala/opencv-colorization-project/actions/workflows/tests.yml/badge.svg)](https://github.com/vishalkoripala/opencv-colorization-project/actions/workflows/tests.yml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React 18](https://img.shields.io/badge/React-18.3-61DAFB.svg?logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.4-646CFF.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
 
-Restore, enhance, and colorize photographs using computer vision and deep learning.
+**PixelRevive** is an end-to-end photo restoration and colorization application. It combines classical computer vision techniques (Non-Local Means denoising, CLAHE contrast enhancement, Laplacian sharpening) with a deep convolutional neural network (Zhang et al., ECCV 2016) to restore degraded historical photographs and synthesize plausible, vivid colors.
+
+Built with a decoupled, high-performance architecture: a **FastAPI** asynchronous backend serving an interactive **React 18 + TypeScript** Single Page Application (SPA).
 
 ---
 
-## Overview
-
-This app turns old, damaged, grayscale, or low-quality photographs into enhanced, colorized images. It combines classical computer vision (denoising, CLAHE contrast enhancement, sharpening) with a CNN-based colorization model, all running through a Streamlit interface with configurable processing stages, an interactive before/after comparison, and processing metrics.
-
-Every restoration stage — denoising, contrast enhancement, sharpening — and colorization itself can be toggled independently, so the app works equally well as a plain restoration tool, a plain colorizer, or both together.
-
-## Demo
-
-🔗 "https://opencv-colorization-project-hdzxkwgs9xmdjxrv3jyguw.streamlit.app/"
-
-
-## Features
-
-- **Configurable restoration pipeline** — denoising, CLAHE contrast enhancement, and sharpening, each independently toggleable, plus a master "Restoration" switch
-- **CNN-based colorization** — the Zhang et al. (2016) colorization network via OpenCV's `dnn` module, with the model downloaded automatically on first use
-- **Interactive before/after comparison** — a drag-to-reveal slider, not just a static side-by-side
-- **Processing metrics** — resolution, processing time, device (CPU/CUDA, honestly detected), and heuristic sharpness/contrast estimates with before→after deltas
-- **Upload validation and metadata** — JPG/PNG/WEBP, corrupted-file handling, automatic downscaling of oversized images with a clear explanation, and a display of filename/resolution/size/mode
-- **Batch processing** — upload up to 10 images at once, processed sequentially with live progress and a combined ZIP download
-- **53 automated tests** covering the enhancement, colorization, pipeline, image utility, and metrics modules
-- **CI** that runs the full test suite on every push and pull request
-
-## Architecture
+## Architecture Overview
 
 ```mermaid
 flowchart TD
-    A[Upload: JPG / PNG / WEBP] --> B[Validate & Read]
-    B --> C{Oversized?}
-    C -->|"Yes, over 1600px"| D[Downscale, preserve aspect ratio]
-    C -->|No| E[Denoising]
-    D --> E
-    E --> F[CLAHE Contrast Enhancement]
-    F --> G[Sharpening]
-    G --> H[BGR to LAB Conversion]
-    H --> I[CNN Predicts AB Channels]
-    I --> J[Reconstruct LAB, Convert to BGR]
-    J --> K[Before / After Slider]
-    J --> L[Quality Metrics]
-    J --> M[PNG Download]
+    Client["React 18 + TypeScript SPA<br/>(Vite @ http://localhost:5173)"]
+    API["FastAPI REST API<br/>(Uvicorn @ http://127.0.0.1:8000)"]
+    
+    subgraph Engine ["Image Processing Core"]
+        Pre["Upload Validation & 1600px Clamp"]
+        Enhance["Classical Enhancement<br/>(Denoise, CLAHE, Sharpen)"]
+        Colorize["Caffe DNN Colorization<br/>(Zhang et al. ECCV 2016)"]
+        Metrics["Quality & Timing Metrics"]
+    end
+
+    Client -->|HTTP / FormData| API
+    API --> Pre
+    Pre --> Enhance
+    Enhance --> Colorize
+    Colorize --> Metrics
+    Metrics -->|JSON + Image Payload| API
+    API -->|REST Response| Client
 ```
 
-Denoising, contrast enhancement, sharpening, and AI colorization are each independently toggleable in the sidebar — this diagram shows the full pipeline with everything enabled.
+### Decoupled Stack
+- **Frontend SPA (`frontend/`)**: React 18, TypeScript, Tailwind CSS, Lucide icons, and an interactive before/after split slider.
+- **Backend API (`backend/`)**: FastAPI, Starlette, Pydantic schemas, asynchronous file handling, and structured REST endpoints (`/api/v1/process`, `/api/v1/batch/process`, `/api/v1/health`, `/api/v1/models/status`).
+- **Processing Engine (`src/` & `backend/src/processing/`)**: OpenCV (`opencv-python-headless`), NumPy, and Caffe deep learning model loaded via OpenCV's `dnn` module.
 
-The codebase is a small `src/` package rather than one monolithic script:
+> **Note on Architecture Evolution:** Streamlit prototype (`app.py`) was formally retired in Phase 4. React + TypeScript with FastAPI is now the sole production interface.
 
-- `app.py` — the Streamlit UI: layout, sidebar controls, and the single-image / batch tabs
-- `src/colorizer.py` — model loading and the LAB-space colorization inference
-- `src/enhancer.py` — denoise / CLAHE contrast / sharpen, each independently callable
-- `src/pipeline.py` — orchestrates enhance + colorize + timing; shared by both single-image and batch modes
-- `src/image_utils.py` — resizing, base64 encoding, the comparison-slider HTML builder, batch-results ZIP bundling
-- `src/metrics.py` — heuristic quality metrics and CPU/CUDA device detection
-- `src/model_downloader.py` — fetches the model weights on first use
-- `src/config.py` — every constant and file path in one place
+---
 
-## How It Works
+## Key Features
 
-1. **Image preprocessing** — the upload is validated, converted to a NumPy array, and downscaled if it exceeds 1600px on the longest side
-2. **Classical restoration** — non-local means denoising, CLAHE contrast enhancement, and a unity-gain sharpening kernel, each optional
-3. **LAB conversion** — the restored image is converted to LAB color space and its L (lightness) channel is isolated
-4. **CNN prediction** — a CNN, given only the L channel, predicts the A and B (color) channels
-5. **AB channel generation** — the network outputs a probability distribution over 313 quantized color bins, which gets converted to concrete A/B values
-6. **Image reconstruction** — the predicted A/B channels are recombined with the original L channel and converted back to BGR for display and download
+- **Independently Configurable Pipeline**: Toggle classical restoration (denoising, contrast enhancement, sharpening) and deep learning colorization independently or execute them together.
+- **Deep Learning Colorization**: Employs the Zhang et al. (2016) architecture via OpenCV `dnn`, predicting color distributions across 313 quantized $(a, b)$ bins conditioned exclusively on the CIE LAB lightness channel ($L$).
+- **Interactive Split Comparison**: Full-featured drag-to-reveal comparison slider with dual-viewport alignment and real-time zoom.
+- **Batch Processing**: Concurrently upload up to 10 images with individual progress tracking, individual downloads, and combined ZIP download.
+- **Production Validation**: Strict validation for image format (`.jpg`, `.jpeg`, `.png`, `.webp`), mime-type, 25 MB payload limit, and automatic aspect-preserving downscaling for images exceeding 1600px.
+- **Real-Time Quality Metrics**: Execution latency breakdown (ms), inference device detection (CPU/CUDA), and before/after heuristic contrast and sharpness deltas.
+- **Exhaustive Automated Test Suite**: 84 automated unit and integration tests (53 core image processing tests and 31 FastAPI route/validation tests).
 
-This structure exists specifically so the project is explainable, not just functional — each stage above is a real, separable step in the code.
+---
 
-## Computer Vision Pipeline
+## Computer Vision & Deep Learning Pipeline
 
-The classical (non-learned) restoration stages, in order:
+1. **Preprocessing**: Validates upload headers and dimensions, normalizes orientations, and resizes images exceeding 1600px on the longest axis while preserving aspect ratio.
+2. **Classical Restoration**:
+   - **Denoising**: `cv2.fastNlMeansDenoisingColored` removes high-frequency scanner/sensor noise while preserving structural edges.
+   - **Contrast Enhancement**: Contrast Limited Adaptive Histogram Equalization (CLAHE) applied specifically to the lightness ($L$) channel in LAB color space, avoiding artificial color saturation.
+   - **Sharpening**: Unity-gain Laplacian kernel restores fine micro-contrasts lost during denoising without introducing clipping or brightness drift.
+3. **LAB Color Space Isolation**: Separates lightness ($L \in [0, 100]$) from chromatic channels ($a, b$).
+4. **CNN Color Inference**: The lightness channel is scaled and fed into the 8-block convolutional architecture to predict chromatic distributions over 313 quantized bins.
+5. **Reconstruction**: Quantized bins are mapped back to continuous $a, b$ values, fused with the original enhanced $L$ channel, and transformed back to BGR/RGB for display and download.
 
-| Stage | Technique | Purpose |
-|---|---|---|
-| Denoising | `cv2.fastNlMeansDenoisingColored` | Removes sensor/scan noise while preserving edges |
-| Contrast | CLAHE on the L channel only (LAB space) | Boosts local contrast without shifting color/saturation |
-| Sharpening | Unity-gain Laplacian kernel | Restores edge definition lost to denoising, without inflating brightness |
-
-Each stage is a standalone function in `src/enhancer.py`, independently unit-tested and independently toggleable from the UI.
-
-## AI Colorization
-
-Colorization uses the pretrained network from **Zhang, Isola, and Efros, "Colorful Image Colorization," ECCV 2016** — loaded via OpenCV's `cv2.dnn` module rather than a full deep learning framework, so the only heavy dependency is OpenCV itself.
-
-The model predicts a distribution over 313 quantized `(a, b)` color bins for every pixel, conditioned only on the L (lightness) channel — it has no access to the original color, by construction, since the whole point is to hallucinate plausible color for images that don't have any. Model loading is separated from inference (`load_model()` / `colorize(image, net)`) so the model can be cached by Streamlit and swapped for a stub in tests.
-
-## LAB Color Space
-
-The pipeline works in LAB rather than RGB because LAB cleanly separates the information the model needs from the information it must preserve:
-
-```text
-L = Lightness       (0-100, preserved exactly from the input)
-A = Green ↔ Red     (predicted by the CNN)
-B = Blue ↔ Yellow   (predicted by the CNN)
-```
-
-Because L is carried through untouched, the network only has to predict color — it can't accidentally distort the brightness or detail already present in the photo. This is also why the restoration stages (denoise/contrast/sharpen) run *before* colorization: they operate on the image that becomes the L channel, so their effects are preserved through to the final output.
-
-## Technology Stack
-
-- **Python 3.12**
-- **OpenCV** (`opencv-python-headless`) — image processing and the `dnn` inference module
-- **NumPy** — array operations throughout the pipeline
-- **Streamlit** — the web UI
-- **Pillow** — image I/O and format handling
-- **pytest** — the test suite
-- **GitHub Actions** — CI
+---
 
 ## Project Structure
 
 ```text
-opencv-colorization-project/
+restoration_project/
+├── backend/                  # FastAPI Application
+│   ├── src/
+│   │   ├── api/routes/       # Health, status, processing, and batch endpoints
+│   │   ├── core/             # App settings, CORS, and logging configuration
+│   │   ├── models/           # Pydantic request/response schemas
+│   │   ├── processing/       # Engine adapters and colorization bridges
+│   │   └── main.py           # FastAPI entrypoint and lifespan handlers
+│   └── tests/                # Backend unit and integration tests (31 tests)
 │
-├── app.py
+├── frontend/                 # React 18 + TypeScript SPA
+│   ├── src/
+│   │   ├── components/       # UI components (Header, Dropzone, Viewer, Metrics, Batch)
+│   │   ├── hooks/            # Custom hooks (useImageProcessing, useBatchProcessing)
+│   │   ├── services/         # Axios API client and proxy routing
+│   │   ├── types/            # TypeScript interfaces and API models
+│   │   ├── App.tsx           # Application root
+│   │   └── main.tsx          # React DOM entrypoint
+│   ├── vite.config.ts        # Vite configuration with `/api` reverse proxy
+│   └── package.json
 │
-├── src/
-│   ├── __init__.py
-│   ├── colorizer.py
-│   ├── enhancer.py
-│   ├── pipeline.py
-│   ├── image_utils.py
-│   ├── metrics.py
-│   ├── model_downloader.py
-│   └── config.py
+├── src/                      # Core Classical CV & Model Download Engine
+│   ├── colorizer.py          # Zhang et al. Caffe inference execution
+│   ├── enhancer.py           # Denoising, CLAHE, and sharpening algorithms
+│   ├── pipeline.py           # Pipeline orchestration and stage execution
+│   ├── image_utils.py        # Image decoding, base64 encoding, ZIP bundling
+│   ├── metrics.py            # Sharpness/contrast delta heuristics
+│   ├── model_downloader.py   # Automated Caffe weights download utility
+│   └── config.py             # Default paths, buffer limits, and model constants
 │
-├── model/
+├── model/                    # Caffe Model Assets
 │   ├── colorization_deploy_v2.prototxt
 │   ├── pts_in_hull.npy
-│   └── colorization_release_v2.caffemodel   (downloaded on first use, not committed)
+│   └── colorization_release_v2.caffemodel  (123 MB weights file)
 │
-├── tests/
-│   ├── conftest.py
-│   ├── test_colorizer.py
-│   ├── test_enhancer.py
-│   ├── test_pipeline.py
-│   ├── test_image_utils.py
-│   └── test_metrics.py
-│
-├── .github/
-│   └── workflows/
-│       └── tests.yml
-│
-├── pyproject.toml
-├── requirements.txt
-├── README.md
-├── LICENSE
-└── .gitignore
+├── tests/                    # Core Engine Test Suite (53 tests)
+├── pyproject.toml            # Project configuration and pytest settings
+├── requirements.txt          # Python backend runtime dependencies
+├── package.json              # Workspace root scripts
+└── README.md
 ```
 
-## Installation
+---
 
-### 1️⃣ Clone the repository
+## Installation & Setup
+
+### Prerequisites
+- **Python**: 3.12+ installed
+- **Node.js**: v18+ or v20+ with `npm`
+
+### 1. Clone Repository & Setup Python Environment
 
 ```bash
 git clone https://github.com/vishalkoripala/opencv-colorization-project.git
 cd opencv-colorization-project
-```
 
-### 2️⃣ Create and activate a virtual environment
-
-```bash
+# Create virtual environment
 python -m venv .venv
-```
 
-macOS / Linux:
-```bash
+# Activate virtual environment
+# Windows (PowerShell / Command Prompt):
+.\.venv\Scripts\activate
+# Linux / macOS:
 source .venv/bin/activate
-```
 
-Windows:
-```bash
-.venv\Scripts\activate
-```
-
-### 3️⃣ Install dependencies
-
-```bash
+# Install backend dependencies
 pip install -r requirements.txt
 ```
 
-## Model Setup
+### 2. Model Weights Setup
 
-The two small model files (`colorization_deploy_v2.prototxt`, `pts_in_hull.npy`) are committed to this repo. The pretrained weights (`colorization_release_v2.caffemodel`, ~123MB) are not, due to GitHub's file size limits.
+The model architecture definition (`colorization_deploy_v2.prototxt`) and cluster centers (`pts_in_hull.npy`) are committed in `model/`.
 
-**Automatic (default):** the app downloads the weights itself the first time you click "Restore & Colorize" with AI Colorization enabled, from the [official release](http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel) (the same source OpenCV's own documentation points to). You'll see a progress bar; the file is then cached in `model/` for the rest of that run.
+The pretrained Caffe weights (`colorization_release_v2.caffemodel`, ~123 MB) can be downloaded automatically on first inference, or manually placed in `model/`:
+- **Source**: [Zhang et al. Official Release](http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel)
+- **Destination Path**: `model/colorization_release_v2.caffemodel`
 
-**Manual (fallback):** if your network blocks that download, fetch the file yourself from the link above and place it in:
-
-```bash
-model/
-```
-
-The app will pick it up automatically on the next run.
-
-## Running Locally
+### 3. Setup Frontend
 
 ```bash
-streamlit run app.py
+cd frontend
+npm install
+cd ..
 ```
 
-## Usage
+---
 
-1. **Upload** a JPG, PNG, or WEBP photo — the app shows its filename, resolution, file size, and original mode
-2. **Choose processing options** in the sidebar: toggle Restoration (and its Denoising/Contrast/Sharpening sub-stages) and AI Colorization independently
-3. Click **✨ Restore & Colorize**
-4. **Compare** the result against the original with the drag-to-reveal slider
-5. Review the **metrics row**: resolution, processing time, device, and sharpness/contrast deltas
-6. **Download** the result as a PNG
+## Running the Application
 
-For multiple photos at once, switch to the **Batch Processing** tab, upload up to 10 images, and click **Process All** — see [Batch Processing](#batch-processing).
+### 1. Launch FastAPI Backend
 
-## Batch Processing
-
-The **Batch Processing** tab accepts multiple images at once (capped at `MAX_BATCH_FILES = 10` to bound memory and processing time), runs them sequentially through the same pipeline as single-image mode, and shows live progress ("3 / 5 processed"). A file that fails (corrupted, unreadable) is skipped with a reported error rather than aborting the whole batch — the rest still process normally. Results come with both individual downloads and a combined "Download All as ZIP" button.
-
-## Testing
+With your virtual environment activated:
 
 ```bash
-pytest
+uvicorn backend.src.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-53 tests across `enhancer`, `colorizer`, `pipeline`, `image_utils`, and `metrics`, using a stub network for colorization tests so the suite doesn't need the real ~123MB model. Covers: toggle independence, output shape/dtype/range, error paths (missing model files, corrupted uploads), the specific regressions this project fixed along the way (sharpen-kernel brightness inflation, the LAB clip), and the metric heuristics against images with known relationships.
+- API Base URL: `http://127.0.0.1:8000`
+- Interactive OpenAPI Docs (Swagger UI): `http://127.0.0.1:8000/docs`
+- Interactive ReDoc: `http://127.0.0.1:8000/redoc`
+- Health Endpoint: `http://127.0.0.1:8000/api/v1/health`
 
-GitHub Actions (`.github/workflows/tests.yml`) runs this suite, plus a syntax check, on every push and pull request.
+### 2. Launch React Frontend
 
-## Deployment
+In a separate terminal:
 
-### Streamlit Community Cloud
+```bash
+cd frontend
+npm run dev
+```
 
-1. Push this repo to a **public** GitHub repository (required for the free tier).
-2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
-3. Click **New app**, select this repo and branch, and set the main file to `app.py`.
-4. Deploy. Streamlit installs from `requirements.txt` automatically.
+- Web UI: `http://localhost:5173`
+- The Vite development server automatically proxies `/api/*` calls to `http://127.0.0.1:8000`.
 
-The model downloads itself the first time a visitor runs colorization (see [Model Setup](#model-setup)), so nothing needs to be uploaded manually.
+---
 
-**Known platform limits, worth knowing before you deploy:**
-- Free-tier apps get roughly 1GB of memory — the `MAX_IMAGE_DIMENSION` cap in `src/config.py` (1600px) is partly there to keep large-image processing within that budget.
-- Apps sleep after 12 hours without traffic and wake on the next visit.
-- The automatic model download may not be strictly "one-time": Community Cloud's free tier doesn't guarantee the filesystem survives a sleep/wake cycle or a redeploy, so the ~123MB download can recur after the app's been asleep. The progress bar and graceful fallback make this a non-issue functionally, but it's worth setting expectations correctly.
+## Testing & Quality Assurance
 
-### Other hosts
+### Backend Test Suite (84 Tests)
 
-Any host that runs standard Python + `pip install -r requirements.txt` + `streamlit run app.py` works the same way — Render, Railway, Fly.io, a VPS, or your own machine. Model paths in `src/config.py` are resolved relative to the file itself, not the working directory, so there's nothing host-specific to configure.
+Run all unit, pipeline, and API endpoint tests:
 
-## Limitations
+```bash
+pytest -v
+```
 
-- **CPU-only in typical deployment** — `opencv-python-headless` ships without CUDA support, so inference runs on CPU; a single image takes a few seconds
-- **Heuristic metrics, not calibrated scores** — sharpness and contrast use standard proxies (Laplacian variance, pixel std. dev.), not a reference-based measure like PSNR/SSIM, since there's no ground-truth image to compare against
-- **Batch limit** — capped at 10 images per batch to bound memory and processing time on a CPU-only deployment
-- **General-purpose colorization model** — the 2016 Zhang et al. network isn't fine-tuned for any particular photo era, damage type, or subject matter, so results vary
-- **Model download depends on outbound network access** to the hosting domain; the manual-placement fallback exists for restricted environments
-- **1600px processing cap** — very large images are downscaled before processing to keep CPU processing time reasonable
+Test coverage includes:
+- Independent enhancement filters (Denoise, CLAHE, Sharpening unity-gain invariant).
+- Colorization model loading, fallback handling, and output tensor contracts.
+- FastAPI REST endpoints: validation errors (400, 413, 422), health checks, model status, single and batch processing.
 
-## Future Improvements
+### Frontend Type-Check & Build Verification
 
-1. **Faster CPU inference** — an ONNX Runtime or OpenVINO backend for the colorization network, which typically outperforms OpenCV's `dnn` module on CPU
-2. **Damage-specific restoration** — scratch and crease removal via `cv2.inpaint`, aimed specifically at physically damaged prints rather than general noise
-3. **Reference-based quality comparison** — when a ground-truth or professionally-restored reference image is available, add real PSNR/SSIM metrics alongside (not instead of) the current heuristics
-4. **A more modern colorization model** — several post-2016 approaches produce more saturated, more plausible color; swapping the model is straightforward given the `load_model()` / `colorize(image, net)` split
-5. **Parallel batch processing** — the current batch mode processes sequentially; a bounded worker pool would speed up multi-image runs without giving up the memory limits that sequential processing makes easy to reason about
+```bash
+cd frontend
+npm run type-check
+npm run build
+```
 
-## Contributing
+---
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-idea`)
-3. Make your changes, and run `pytest` before opening a PR
-4. Open a pull request describing what changed and why
+## API Reference Summary
 
-## License
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Root API service identity and health link |
+| `GET` | `/api/v1/health` | Comprehensive system health, uptime, and host details |
+| `GET` | `/api/v1/models/status` | Model weights presence, download status, and readiness |
+| `POST`| `/api/v1/process` | Single-image upload, pipeline execution, and metrics |
+| `POST`| `/api/v1/batch/process`| Multi-image batch processing (up to 10 files) with ZIP |
 
-The code in this repository is licensed under the [MIT License](LICENSE).
+---
 
-The pretrained colorization model (architecture and weights) is from Zhang, Isola, and Efros, *"Colorful Image Colorization,"* ECCV 2016, [BSD-2-Clause licensed](https://github.com/richzhang/colorization/blob/master/LICENSE) in the original repository. If you use this project's colorization results in research, please cite:
+## License & Attribution
+
+- **Source Code**: Licensed under the [MIT License](LICENSE).
+- **Pretrained Colorization Model**: Zhang, Isola, and Efros, *"Colorful Image Colorization"*, ECCV 2016 ([BSD-2-Clause](https://github.com/richzhang/colorization/blob/master/LICENSE)).
 
 ```bibtex
 @inproceedings{zhang2016colorful,
@@ -289,9 +240,9 @@ The pretrained colorization model (architecture and weights) is from Zhang, Isol
 }
 ```
 
+---
+
 ## Author
 
-### Vishal Koripala
-
-AI & ML Enthusiast  
-Computer Vision & Deep Learning Learner
+**Vishal Koripala**  
+AI & Computer Vision Practitioner
