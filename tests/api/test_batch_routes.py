@@ -146,3 +146,25 @@ class TestBatchEndpoints:
         json_data = response.json()
         assert json_data["total_succeeded"] == 2
         assert json_data["zip_base64"].startswith("data:application/zip;base64,")
+
+    def test_process_batch_with_extended_options(self, sample_png):
+        files = [
+            ("files", ("batch_ext1.png", sample_png, "image/png")),
+        ]
+        data = {
+            "denoise": "true",
+            "contrast": "true",
+            "sharpen": "false",
+            "colorize": "false",
+            "repair": "true",
+            "inpaint_method": "lama",
+            "face_restore": "true",
+            "color_saturation": "0.80",
+            "color_temperature": "-0.10",
+        }
+        response = client.post("/api/v1/restoration/batch", files=files, data=data)
+        assert response.status_code == 200
+        json_data = response.json()
+        assert json_data["total_succeeded"] == 1
+        assert json_data["items"][0]["status"] == "success"
+

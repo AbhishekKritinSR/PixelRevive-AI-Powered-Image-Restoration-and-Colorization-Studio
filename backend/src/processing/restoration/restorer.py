@@ -36,6 +36,7 @@ import numpy as np
 
 from .contrast import enhance_contrast
 from .denoiser import adaptive_denoise_image, denoise_image
+from .face_restorer import FaceRestorer
 from .scratch_repair import repair_scratches
 from .sharpener import sharpen_image
 from .super_resolution import upscale_image
@@ -50,15 +51,20 @@ def enhance_image(
     repair: bool = False,
     upscale: bool = False,
     scale: int = 2,
+    inpaint_method: str = "telea",
+    face_restore: bool = False,
+    sr_model: str = "fsrcnn",
+    preserve_texture: bool = True,
 ) -> np.ndarray:
     """Run the classical restoration pipeline on a BGR uint8 image.
 
-    The stages execute in strict sequence:
-        1. Repair (detects and inpaints archival scratches/defects if enabled)
-        2. Denoise (smooths noise and inpainting boundaries, fixed or adaptive)
-        3. Contrast (enhances local dynamic range on cleaned signal)
-        4. Sharpen (restores micro-edge definition smoothed by denoising)
-        5. Super-Resolution (AI 2x or 4x upscaling via FSRCNN if enabled)
+    The stages execute in sequence:
+        1. Repair (detects and inpaints archival scratches/defects via Telea, NS, or LaMa)
+        2. Denoise (smooths noise while preserving texture micro-contrast)
+        3. Contrast (enhances local dynamic range on cleaned signal via CLAHE)
+        4. Face Restoration (optional localized identity-preserving facial enhancement)
+        5. Sharpen (restores micro-edge definition smoothed by denoising)
+        6. Super-Resolution (AI 2x or 4x upscaling via FSRCNN or Real-ESRGAN if enabled)
 
     Each stage can be independently enabled or disabled. Disabled stages
     are bypassed completely with zero computational overhead.
@@ -76,13 +82,21 @@ def enhance_image(
             Whether to adaptively select denoising strength based on image noise.
             Default is True. If False, uses fixed Non-Local Means parameters.
         repair:
-            Whether to detect archival scratches and reconstruct them with OpenCV inpainting.
+            Whether to detect archival scratches and reconstruct them.
             Default is False (disabled by default for full backward compatibility).
         upscale:
-            Whether to upscale the output using AI super-resolution (FSRCNN).
+            Whether to upscale the output using AI super-resolution (FSRCNN or Real-ESRGAN).
             Default is False.
         scale:
             Super-resolution scale factor (2 or 4). Default is 2.
+        inpaint_method:
+            Inpainting algorithm ('telea', 'ns', or 'lama'). Default is 'telea'.
+        face_restore:
+            Whether to perform localized identity-preserving facial enhancement. Default is False.
+        sr_model:
+            Super-resolution model identifier ('fsrcnn' or 'realesrgan'). Default is 'fsrcnn'.
+        preserve_texture:
+            Whether to blend back high-frequency photographic texture. Default is True.
 
     Returns:
         Restored BGR image as a uint8 NumPy array.
@@ -90,22 +104,25 @@ def enhance_image(
     result = image
 
     if repair:
-        result, _ = repair_scratches(result)
+        result, _ = repair_scratches(result, method=inpaint_method)
 
     if denoise:
         if adaptive_denoise:
-            result, _ = adaptive_denoise_image(result)
+            result, _ = adaptive_denoise_image(result, preserve_texture=preserve_texture)
         else:
-            result = denoise_image(result)
+            result = denoise_image(result, preserve_texture=preserve_texture)
 
     if contrast:
         result = enhance_contrast(result)
+
+    if face_restore:
+        result, _ = FaceRestorer.restore_faces(result)
 
     if sharpen:
         result = sharpen_image(result)
 
     if upscale:
-        result, _ = upscale_image(result, scale=scale)
+        result, _ = upscale_image(result, scale=scale, model=sr_model)
 
     return result
 

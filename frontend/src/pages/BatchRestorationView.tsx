@@ -29,10 +29,15 @@ export const BatchRestorationView: React.FC<BatchRestorationViewProps> = ({ isMo
     sharpen: true,
     colorize: true,
     repair: false,
+    inpaint_method: "lama",
+    face_restore: false,
     upscale: false,
     scale: 2,
+    sr_model: "fsrcnn",
     colorization_model: "zhang_caffe",
     render_factor: 14,
+    color_saturation: 0.85,
+    color_temperature: 0.0,
   });
   const [availableModels, setAvailableModels] = useState<ModelRegistryItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);

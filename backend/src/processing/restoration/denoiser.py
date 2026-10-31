@@ -170,11 +170,14 @@ def adaptive_denoise_image(
     image: np.ndarray,
     noise_score: Optional[float] = None,
     params: Optional[DenoiseParameters] = None,
+    preserve_texture: bool = True,
+    texture_weight: float = 0.35,
 ) -> Tuple[np.ndarray, DenoiseParameters]:
     """Denoise an image adaptively based on its measured noise characteristics.
 
     Preserves fine micro-textures by minimizing or skipping filtering on low-noise images,
-    while applying robust Non-Local Means filtering on high-noise images.
+    while applying robust Non-Local Means filtering on high-noise images with high-frequency
+    photographic texture residual blending.
 
     Args:
         image:
@@ -183,6 +186,10 @@ def adaptive_denoise_image(
             Optional precomputed noise estimate. If omitted, noise is estimated via AnalysisService.
         params:
             Optional preselected DenoiseParameters instance.
+        preserve_texture:
+            Whether to blend back high-frequency micro-texture to prevent plastic/waxy appearance.
+        texture_weight:
+            Blending coefficient for clamped texture residual (default 0.35).
 
     Returns:
         Tuple of (denoised_image_array, applied_DenoiseParameters).
@@ -249,6 +256,12 @@ def adaptive_denoise_image(
         if image.ndim == 3 and image.shape[2] == 1:
             denoised = denoised[:, :, np.newaxis]
 
+    # 4. Detail-Preserving High-Frequency Residual Blending (Anti-Smoothing)
+    if preserve_texture and texture_weight > 0.0:
+        detail = image.astype(np.float32) - denoised.astype(np.float32)
+        clamped_detail = np.clip(detail, -7.0, 7.0)
+        denoised = np.clip(denoised.astype(np.float32) + texture_weight * clamped_detail, 0, 255).astype(np.uint8)
+
     return denoised, selected_params
 
 
@@ -259,6 +272,8 @@ def denoise_image(
     template_window_size: int = DENOISE_TEMPLATE_WINDOW,
     search_window_size: int = DENOISE_SEARCH_WINDOW,
     adaptive: bool = False,
+    preserve_texture: bool = True,
+    texture_weight: float = 0.35,
 ) -> np.ndarray:
     """Remove sensor and scan noise while preserving edges via Non-Local Means denoising.
 
@@ -279,12 +294,20 @@ def denoise_image(
             Odd integer specifying the search area window (default: 21).
         adaptive:
             If True, automatically estimates image noise and selects optimal parameters.
+        preserve_texture:
+            Whether to blend back high-frequency photographic texture.
+        texture_weight:
+            Blending coefficient for clamped texture residual.
 
     Returns:
         Denoised BGR or grayscale image as a uint8 NumPy array.
     """
     if adaptive:
-        result, _ = adaptive_denoise_image(image)
+        result, _ = adaptive_denoise_image(
+            image,
+            preserve_texture=preserve_texture,
+            texture_weight=texture_weight,
+        )
         return result
 
     if not isinstance(image, np.ndarray):
@@ -306,7 +329,7 @@ def denoise_image(
     h_col_val = float(h_color if h_color is not None else DENOISE_H_COLOR)
 
     if is_color:
-        return cv2.fastNlMeansDenoisingColored(
+        denoised = cv2.fastNlMeansDenoisingColored(
             image,
             None,
             h_val,
@@ -324,5 +347,11 @@ def denoise_image(
             search_window_size,
         )
         if image.ndim == 3 and image.shape[2] == 1:
-            return denoised[:, :, np.newaxis]
-        return denoised
+            denoised = denoised[:, :, np.newaxis]
+
+    if preserve_texture and texture_weight > 0.0:
+        detail = image.astype(np.float32) - denoised.astype(np.float32)
+        clamped_detail = np.clip(detail, -7.0, 7.0)
+        denoised = np.clip(denoised.astype(np.float32) + texture_weight * clamped_detail, 0, 255).astype(np.uint8)
+
+    return denoised

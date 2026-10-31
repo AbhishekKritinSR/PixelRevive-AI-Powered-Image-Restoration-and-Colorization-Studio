@@ -16,3 +16,7 @@ frontend/dist/
 Thumbs.db
 
 model/colorization_release_v2.caffemodel
+
+# Pretrained AI model binary assets
+model/*.onnx
+model/*.onnx.partial

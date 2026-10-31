@@ -259,3 +259,31 @@ class TestRestorationEndpoints:
         assert response.status_code == 200
         assert response.json()["options_applied"]["colorize"] is False
 
+    def test_process_with_extended_options(self, valid_png_bytes, monkeypatch):
+        model_service = get_model_service()
+        monkeypatch.setattr(model_service, "get_colorizer", lambda name: MockFastColorizer())
+
+        files = {"file": ("test.png", valid_png_bytes, "image/png")}
+        data = {
+            "denoise": "true",
+            "contrast": "true",
+            "sharpen": "false",
+            "colorize": "true",
+            "repair": "true",
+            "inpaint_method": "lama",
+            "face_restore": "true",
+            "upscale": "false",
+            "color_saturation": "0.90",
+            "color_temperature": "0.20",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 200
+        json_data = response.json()
+        opts = json_data["options_applied"]
+        assert opts["repair"] is True
+        assert opts["inpaint_method"] == "lama"
+        assert opts["face_restore"] is True
+        assert opts["color_saturation"] == 0.90
+        assert opts["color_temperature"] == 0.20
+
+

@@ -55,6 +55,26 @@ def process_batch_images(
         default=14,
         description="Colorization rendering factor (10 to 40, default 14)",
     ),
+    inpaint_method: str = Form(
+        default="lama",
+        description="Inpainting method ('lama', 'telea', 'ns')",
+    ),
+    face_restore: bool = Form(
+        default=False,
+        description="Apply identity-preserving face enhancement",
+    ),
+    sr_model: str = Form(
+        default="fsrcnn",
+        description="Super-resolution model ('fsrcnn' or 'realesrgan')",
+    ),
+    color_saturation: float = Form(
+        default=0.85,
+        description="Color saturation factor (0.0 to 1.5, default 0.85)",
+    ),
+    color_temperature: float = Form(
+        default=0.0,
+        description="Color temperature bias (-1.0 cool to 1.0 warm, default 0.0)",
+    ),
     batch_service: BatchService = Depends(get_batch_service),
 ) -> BatchRestorationResponse:
     """Process multiple photographs in a batch.
@@ -68,10 +88,15 @@ def process_batch_images(
         colorize=colorize,
         adaptive_denoise=adaptive_denoise,
         repair=repair,
+        inpaint_method=inpaint_method,
+        face_restore=face_restore,
         upscale=upscale,
         scale=scale,
+        sr_model=sr_model,
         colorization_model=colorization_model,
         render_factor=render_factor,
+        color_saturation=color_saturation,
+        color_temperature=color_temperature,
     )
 
     files_data = [(f.filename or f"image_{idx}.png", f.file.read()) for idx, f in enumerate(files)]

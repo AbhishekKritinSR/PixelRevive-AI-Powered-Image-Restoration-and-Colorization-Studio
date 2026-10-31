@@ -200,8 +200,9 @@ def validate_super_resolution_resource_limits(
 def upscale_image(
     image: np.ndarray,
     scale: int = 2,
+    model: str = "fsrcnn",
 ) -> Tuple[np.ndarray, SuperResolutionMetadata]:
-    """Upscale a photographic image using OpenCV DNN Super Resolution and FSRCNN.
+    """Upscale a photographic image using AI super-resolution (FSRCNN or Real-ESRGAN).
 
     Supports both 3-channel BGR and 1-channel Grayscale images.
 
@@ -210,6 +211,8 @@ def upscale_image(
             Input image as a uint8 NumPy array of shape (H, W) or (H, W, 3).
         scale:
             Upscaling factor (2 or 4). Default is 2.
+        model:
+            Super-resolution model identifier ('fsrcnn' or 'realesrgan'). Default is 'fsrcnn'.
 
     Returns:
         Tuple of (upscaled uint8 NumPy array, SuperResolutionMetadata).
@@ -243,10 +246,34 @@ def upscale_image(
     # 2. Enforce resource safety limits
     out_w, out_h = validate_super_resolution_resource_limits(in_h, in_w, scale)
 
-    # 3. Retrieve model instance
+    # 3. Handle Real-ESRGAN execution if requested
+    if model.lower().strip() == "realesrgan":
+        try:
+            from .sr_realesrgan import RealESRGANUpscaler
+            resrg = RealESRGANUpscaler.get_instance()
+            if resrg.is_available:
+                t0 = time.perf_counter()
+                upscaled, ok = resrg.upscale(image, target_scale=scale)
+                if ok:
+                    elapsed = time.perf_counter() - t0
+                    meta = SuperResolutionMetadata(
+                        applied=True,
+                        scale=scale,
+                        model_name="realesrgan_x4",
+                        input_dimensions=(in_w, in_h),
+                        output_dimensions=(upscaled.shape[1], upscaled.shape[0]),
+                        elapsed_seconds=round(elapsed, 4),
+                        skipped=False,
+                        skip_reason=None,
+                    )
+                    return upscaled, meta
+        except Exception:
+            pass  # Fall back to FSRCNN below
+
+    # 4. Retrieve FSRCNN model instance
     sr = get_super_resolution_model(scale)
 
-    # 4. Execute inference with timing
+    # 5. Execute inference with timing
     t0 = time.perf_counter()
     upscaled = sr.upsample(image)
     elapsed_seconds = time.perf_counter() - t0

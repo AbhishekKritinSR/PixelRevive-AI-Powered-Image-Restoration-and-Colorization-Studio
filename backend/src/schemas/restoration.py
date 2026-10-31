@@ -24,6 +24,14 @@ class RestorationOptions(BaseModel):
         default=False,
         description="Enable archival scratch repair and inpainting",
     )
+    inpaint_method: str = Field(
+        default="lama",
+        description="Inpainting method ('lama', 'telea', 'ns')",
+    )
+    face_restore: bool = Field(
+        default=False,
+        description="Enable optional identity-preserving facial feature restoration",
+    )
     upscale: bool = Field(
         default=False,
         description="Enable AI super-resolution upscaling (2x or 4x)",
@@ -32,6 +40,10 @@ class RestorationOptions(BaseModel):
         default=2,
         description="Super-resolution scaling factor (2 or 4)",
     )
+    sr_model: str = Field(
+        default="fsrcnn",
+        description="Super-resolution model ('fsrcnn' or 'realesrgan')",
+    )
     colorization_model: str = Field(
         default="zhang_caffe",
         description="Identifier of the colorization model to use ('zhang_caffe')",
@@ -39,6 +51,14 @@ class RestorationOptions(BaseModel):
     render_factor: int = Field(
         default=14,
         description="Colorization rendering factor between 10 and 40 (default 14 corresponds to native 224x224)",
+    )
+    color_saturation: float = Field(
+        default=0.85,
+        description="Chroma saturation factor (0.0 to 1.5, default 0.85 for natural historical tones)",
+    )
+    color_temperature: float = Field(
+        default=0.0,
+        description="Color temperature bias (-1.0 cool to 1.0 warm, default 0.0 neutral)",
     )
 
 

@@ -7,6 +7,7 @@ import {
   Sparkles,
   Wand2,
   Maximize2,
+  ScanFace,
 } from "lucide-react";
 import { RestorationOptions, ModelRegistryItem } from "../../types/api";
 
@@ -139,11 +140,11 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               <Paintbrush size={15} color="var(--success)" />
               <span>Scratch Repair & Inpainting</span>
               <span className="badge badge-outline" style={{ fontSize: "0.625rem" }}>
-                Archival
+                {(options.inpaint_method ?? "lama") === "lama" ? "LaMa AI" : "OpenCV"}
               </span>
             </div>
             <div className="option-desc">
-              Detects linear scratches and physical surface defects, reconstructing damaged pixels using OpenCV inpainting.
+              Detects linear scratches and physical surface defects, reconstructing damaged pixels using deep AI or PDE inpainting.
             </div>
           </div>
           <label className="switch" onClick={(e) => e.stopPropagation()}>
@@ -157,6 +158,44 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
             <span className="slider" />
           </label>
         </div>
+
+        {/* Sub-option: Inpainting Engine Selection */}
+        {options.repair && (
+          <div
+            className="sub-option-container"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                Inpainting Engine
+              </label>
+              <span className="badge badge-accent" style={{ fontSize: "0.625rem" }}>
+                {(options.inpaint_method ?? "lama") === "lama" ? "Deep AI (FFC)" : "OpenCV PDE"}
+              </span>
+            </div>
+            <select
+              className="select-input"
+              value={options.inpaint_method || "lama"}
+              disabled={disabled}
+              onChange={(e) => updateStringOption("inpaint_method", e.target.value)}
+              aria-label="Select Inpainting Engine"
+            >
+              <option value="lama">LaMa Deep AI – Fast Fourier Convolutions (Recommended)</option>
+              <option value="telea">OpenCV Fast Marching (Telea)</option>
+              <option value="ns">OpenCV Navier-Stokes (Fluid Dynamics)</option>
+            </select>
+            <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
+              {(options.inpaint_method ?? "lama") === "lama"
+                ? "Deep neural inpainting with global receptive field; cleanly eliminates wide diagonal scratches without edge blur."
+                : "Classical partial differential equation inpainting; optimal for fine hairline scratches."}
+            </div>
+          </div>
+        )}
 
         {/* ============================================================= */}
         {/* 3. Contrast Recovery (CLAHE)                                 */}
@@ -217,7 +256,39 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
         </div>
 
         {/* ============================================================= */}
-        {/* 5. AI Colorization & Render Factor Tuning (Phase 5.5)         */}
+        {/* 5. Face Detail Enhancement (Identity-Preserving)              */}
+        {/* ============================================================= */}
+        <div
+          className={`option-item ${options.face_restore ? "active" : ""}`}
+          onClick={() => toggleOption("face_restore")}
+          style={{ cursor: disabled ? "not-allowed" : "pointer" }}
+        >
+          <div className="option-info">
+            <div className="option-title">
+              <ScanFace size={15} color="var(--accent-primary)" />
+              <span>Face Detail Enhancement</span>
+              <span className="badge badge-outline" style={{ fontSize: "0.625rem" }}>
+                Identity-Safe
+              </span>
+            </div>
+            <div className="option-desc">
+              Locates facial landmarks and applies localized adaptive contrast and edge sharpening while preserving identity.
+            </div>
+          </div>
+          <label className="switch" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={options.face_restore ?? false}
+              disabled={disabled}
+              onChange={() => toggleOption("face_restore")}
+              aria-label="Toggle Face Detail Enhancement"
+            />
+            <span className="slider" />
+          </label>
+        </div>
+
+        {/* ============================================================= */}
+        {/* 6. AI Colorization & Render Factor Tuning (Phase 5.5)         */}
         {/* ============================================================= */}
         <div
           className={`option-item ${options.colorize ? "active" : ""}`}
@@ -382,11 +453,179 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* Chroma Saturation Slider */}
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  Chroma Saturation
+                </label>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "var(--accent-primary)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {Math.round((options.color_saturation ?? 0.85) * 100)}%
+                  <span style={{ fontSize: "0.6875rem", color: "var(--text-secondary)", marginLeft: "0.25rem" }}>
+                    {(options.color_saturation ?? 0.85) <= 0.75 ? "(Muted)" : (options.color_saturation ?? 0.85) >= 1.0 ? "(Vivid)" : "(Natural)"}
+                  </span>
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min="0.5"
+                max="1.3"
+                step="0.05"
+                value={options.color_saturation ?? 0.85}
+                disabled={disabled}
+                onChange={(e) => updateNumericOption("color_saturation", parseFloat(e.target.value))}
+                style={{ width: "100%", accentColor: "var(--accent-primary)", cursor: "pointer" }}
+                aria-label="Chroma Saturation Slider"
+              />
+
+              <div style={{ display: "flex", gap: "0.25rem", marginTop: "0.35rem" }}>
+                {[
+                  { label: "Muted (70%)", val: 0.7 },
+                  { label: "Natural (85%)", val: 0.85 },
+                  { label: "Full (100%)", val: 1.0 },
+                  { label: "Vivid (115%)", val: 1.15 },
+                ].map((preset) => (
+                  <button
+                    key={preset.val}
+                    type="button"
+                    className={`btn ${
+                      Math.abs((options.color_saturation ?? 0.85) - preset.val) < 0.02
+                        ? "btn-secondary"
+                        : "btn-outline"
+                    }`}
+                    style={{
+                      flex: 1,
+                      padding: "0.2rem 0.35rem",
+                      fontSize: "0.6875rem",
+                      justifyContent: "center",
+                      borderColor:
+                        Math.abs((options.color_saturation ?? 0.85) - preset.val) < 0.02
+                          ? "var(--accent-primary)"
+                          : undefined,
+                      color:
+                        Math.abs((options.color_saturation ?? 0.85) - preset.val) < 0.02
+                          ? "var(--accent-primary)"
+                          : undefined,
+                    }}
+                    onClick={() => updateNumericOption("color_saturation", preset.val)}
+                    disabled={disabled}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Color Balance (Temperature) Slider */}
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  Color Balance (Temperature)
+                </label>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "var(--accent-primary)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {(options.color_temperature ?? 0.0) > 0 ? "+" : ""}
+                  {(options.color_temperature ?? 0.0).toFixed(1)}
+                  <span style={{ fontSize: "0.6875rem", color: "var(--text-secondary)", marginLeft: "0.25rem" }}>
+                    {(options.color_temperature ?? 0.0) === 0 ? "(Neutral)" : (options.color_temperature ?? 0.0) > 0 ? "(Warm Amber)" : "(Cool Slate)"}
+                  </span>
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min="-1.0"
+                max="1.0"
+                step="0.1"
+                value={options.color_temperature ?? 0.0}
+                disabled={disabled}
+                onChange={(e) => updateNumericOption("color_temperature", parseFloat(e.target.value))}
+                style={{ width: "100%", accentColor: "var(--accent-primary)", cursor: "pointer" }}
+                aria-label="Color Temperature Slider"
+              />
+
+              <div style={{ display: "flex", gap: "0.25rem", marginTop: "0.35rem" }}>
+                {[
+                  { label: "Cool (-0.4)", val: -0.4 },
+                  { label: "Neutral (0.0)", val: 0.0 },
+                  { label: "Warm (+0.4)", val: 0.4 },
+                ].map((preset) => (
+                  <button
+                    key={preset.val}
+                    type="button"
+                    className={`btn ${
+                      Math.abs((options.color_temperature ?? 0.0) - preset.val) < 0.05
+                        ? "btn-secondary"
+                        : "btn-outline"
+                    }`}
+                    style={{
+                      flex: 1,
+                      padding: "0.2rem 0.35rem",
+                      fontSize: "0.6875rem",
+                      justifyContent: "center",
+                      borderColor:
+                        Math.abs((options.color_temperature ?? 0.0) - preset.val) < 0.05
+                          ? "var(--accent-primary)"
+                          : undefined,
+                      color:
+                        Math.abs((options.color_temperature ?? 0.0) - preset.val) < 0.05
+                          ? "var(--accent-primary)"
+                          : undefined,
+                    }}
+                    onClick={() => updateNumericOption("color_temperature", preset.val)}
+                    disabled={disabled}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* ============================================================= */}
-        {/* 6. AI Super-Resolution Upscaling (Phase 5.4)                 */}
+        {/* 7. AI Super-Resolution Upscaling (Phase 5.4)                 */}
         {/* ============================================================= */}
         <div
           className={`option-item ${options.upscale ? "active" : ""}`}
@@ -398,11 +637,11 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               <Maximize2 size={15} color="var(--accent-primary)" />
               <span>AI Super-Resolution</span>
               <span className="badge badge-outline" style={{ fontSize: "0.625rem" }}>
-                FSRCNN
+                {(options.sr_model ?? "fsrcnn") === "realesrgan" ? "Real-ESRGAN" : "FSRCNN"}
               </span>
             </div>
             <div className="option-desc">
-              FSRCNN neural upscaling magnifies photograph resolution by 2× or 4×, reconstructing fine spatial details.
+              Neural upscaling magnifies photograph resolution by 2× or 4×, reconstructing fine spatial details.
             </div>
           </div>
           <label className="switch" onClick={(e) => e.stopPropagation()}>
@@ -417,45 +656,76 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
           </label>
         </div>
 
-        {/* Super-Resolution Scale Selection */}
+        {/* Super-Resolution Scale & Architecture Selection */}
         {options.upscale && (
           <div
             className="sub-option-container"
             onClick={(e) => e.stopPropagation()}
             style={{
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              flexDirection: "column",
+              gap: "0.625rem",
             }}
           >
+            {/* Model Architecture */}
             <div>
-              <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                Magnification Scale
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                  Upscaling Model Architecture
+                </label>
               </div>
-              <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
-                Select target upscaling multiplier.
-              </div>
+              <select
+                className="select-input"
+                value={options.sr_model || "fsrcnn"}
+                disabled={disabled}
+                onChange={(e) => updateStringOption("sr_model", e.target.value)}
+                aria-label="Select Upscaling Model Architecture"
+              >
+                <option value="fsrcnn">FSRCNN – Fast Super-Resolution CNN (Lightweight)</option>
+                <option value="realesrgan">Real-ESRGAN x4+ – Deep Residual Network (High Quality)</option>
+              </select>
             </div>
 
-            <div style={{ display: "flex", gap: "0.25rem" }}>
-              <button
-                type="button"
-                className={`btn ${(options.scale ?? 2) === 2 ? "btn-primary" : "btn-secondary"}`}
-                style={{ padding: "0.25rem 0.625rem", fontSize: "0.75rem" }}
-                onClick={() => updateNumericOption("scale", 2)}
-                disabled={disabled}
-              >
-                2× Scale
-              </button>
-              <button
-                type="button"
-                className={`btn ${(options.scale ?? 2) === 4 ? "btn-primary" : "btn-secondary"}`}
-                style={{ padding: "0.25rem 0.625rem", fontSize: "0.75rem" }}
-                onClick={() => updateNumericOption("scale", 4)}
-                disabled={disabled}
-              >
-                4× Scale
-              </button>
+            {/* Magnification Scale */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingTop: "0.25rem",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                  Magnification Scale
+                </div>
+                <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
+                  {(options.sr_model ?? "fsrcnn") === "realesrgan" && (options.scale ?? 2) === 2
+                    ? "Native 4× inference with 2× Lanczos downsampling"
+                    : "Target output multiplier"}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.25rem" }}>
+                <button
+                  type="button"
+                  className={`btn ${(options.scale ?? 2) === 2 ? "btn-primary" : "btn-secondary"}`}
+                  style={{ padding: "0.25rem 0.625rem", fontSize: "0.75rem" }}
+                  onClick={() => updateNumericOption("scale", 2)}
+                  disabled={disabled}
+                >
+                  2× Scale
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${(options.scale ?? 2) === 4 ? "btn-primary" : "btn-secondary"}`}
+                  style={{ padding: "0.25rem 0.625rem", fontSize: "0.75rem" }}
+                  onClick={() => updateNumericOption("scale", 4)}
+                  disabled={disabled}
+                >
+                  4× Scale
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -166,7 +166,7 @@ class RestorationService:
         # 3. Convert RGB -> BGR for OpenCV processing
         bgr = cv2.cvtColor(processed_input_rgb, cv2.COLOR_RGB2BGR)
 
-        # 4. Classical restoration stages (repair, denoise, contrast, sharpen)
+        # 4. Classical restoration stages (repair, denoise, contrast, sharpen, face_restore)
         enhanced_bgr = enhance_image(
             bgr,
             denoise=options.denoise,
@@ -174,6 +174,9 @@ class RestorationService:
             sharpen=options.sharpen,
             adaptive_denoise=options.adaptive_denoise,
             repair=options.repair,
+            inpaint_method=getattr(options, "inpaint_method", "lama"),
+            face_restore=getattr(options, "face_restore", False),
+            sr_model=getattr(options, "sr_model", "fsrcnn"),
         )
 
         # 5. AI Colorization stage
@@ -192,7 +195,14 @@ class RestorationService:
 
             colorizer = self.model_service.get_colorizer(model_name)
 
-            # Pass render_factor if supported by colorizer signature
+            # Prepare optional tuning parameters (saturation, temperature)
+            color_kwargs = {}
+            if hasattr(options, "color_saturation"):
+                color_kwargs["saturation"] = options.color_saturation
+            if hasattr(options, "color_temperature"):
+                color_kwargs["color_temperature"] = options.color_temperature
+
+            # Pass render_factor and tuning options if supported
             import inspect
 
             sig = inspect.signature(colorizer.colorize)
@@ -200,10 +210,12 @@ class RestorationService:
                 p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
             ):
                 colorized_float = colorizer.colorize(
-                    enhanced_bgr, render_factor=options.render_factor
+                    enhanced_bgr,
+                    render_factor=options.render_factor,
+                    **color_kwargs,
                 )
             else:
-                colorized_float = colorizer.colorize(enhanced_bgr)
+                colorized_float = colorizer.colorize(enhanced_bgr, **color_kwargs)
 
             # Convert float32 [0.0, 1.0] -> uint8 [0, 255]
             colorized_bgr = (colorized_float * 255.0).astype(np.uint8)
@@ -212,7 +224,8 @@ class RestorationService:
 
         # 6. AI Super-Resolution stage (if enabled)
         if options.upscale:
-            result_bgr, _ = upscale_image(colorized_bgr, scale=options.scale)
+            sr_model = getattr(options, "sr_model", "fsrcnn")
+            result_bgr, _ = upscale_image(colorized_bgr, scale=options.scale, model=sr_model)
         else:
             result_bgr = colorized_bgr
 

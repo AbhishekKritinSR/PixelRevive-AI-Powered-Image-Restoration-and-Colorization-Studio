@@ -58,19 +58,37 @@ def _is_ridge_not_step_edge(
     have a unimodal, relatively homogeneous distribution (low IQR).
     Natural edges (object silhouettes, horizon lines, building borders) separate two distinct
     brightness regions, producing high variance / large IQR in their flanking neighborhood.
+    Also supports scratches cutting across lighting gradients (e.g. human face contours).
     """
     k3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     dilated = cv2.dilate(comp_mask, k3, iterations=2)
     neighborhood = cv2.subtract(dilated, comp_mask)
     neighbor_pixels = gray_image[neighborhood > 0]
+    center_pixels = gray_image[comp_mask > 0]
 
-    if len(neighbor_pixels) < 5:
+    if len(neighbor_pixels) < 5 or len(center_pixels) < 2:
         return True
 
-    p75 = np.percentile(neighbor_pixels, 75)
-    p25 = np.percentile(neighbor_pixels, 25)
+    p75 = float(np.percentile(neighbor_pixels, 75))
+    p25 = float(np.percentile(neighbor_pixels, 25))
     iqr = float(p75 - p25)
-    return iqr <= max_iqr
+
+    # 1. Standard check: unimodal neighborhood (low IQR)
+    if iqr <= max_iqr:
+        return True
+
+    # 2. Gradient-tolerant differential check:
+    # A true scratch cutting across an illumination gradient (such as a cheek or forehead)
+    # is a localized extremum (contrast trough or peak) distinctly offset from its flanking envelope.
+    c_med = float(np.median(center_pixels))
+    f_med = float(np.median(neighbor_pixels))
+    contrast = abs(c_med - f_med)
+    is_extrema = (c_med < p25 - 6.0) or (c_med > p75 + 6.0)
+
+    if is_extrema and contrast >= 15.0:
+        return True
+
+    return False
 
 
 def _filter_directional_components(
@@ -327,8 +345,8 @@ def repair_scratches(
         raise ValueError("Image dimensions must be at least 2x2")
 
     method_clean = method.lower().strip()
-    if method_clean not in ("telea", "ns"):
-        raise ValueError(f"Unsupported inpainting method '{method}'. Choose 'telea' or 'ns'.")
+    if method_clean not in ("telea", "ns", "lama"):
+        raise ValueError(f"Unsupported inpainting method '{method}'. Choose 'lama', 'telea', or 'ns'.")
 
     flags = cv2.INPAINT_TELEA if method_clean == "telea" else cv2.INPAINT_NS
 
@@ -386,7 +404,21 @@ def repair_scratches(
         meta.applied = False
         return image.copy(), meta
 
-    # Execute OpenCV inpainting
+    # Execute inpainting
+    if method_clean == "lama":
+        try:
+            from .inpainter_lama import LaMaInpainter
+            lama = LaMaInpainter.get_instance()
+            if lama.is_available:
+                repaired_image, success = lama.inpaint(image, repair_mask)
+                if success:
+                    meta.applied = True
+                    meta.method = "lama"
+                    return repaired_image, meta
+        except Exception:
+            pass  # Graceful fallback to Telea below
+
+    # Execute classical OpenCV inpainting (Telea or Navier-Stokes)
     repaired_image = cv2.inpaint(image, repair_mask, inpaintRadius=inpaint_radius, flags=flags)
     meta.applied = True
 

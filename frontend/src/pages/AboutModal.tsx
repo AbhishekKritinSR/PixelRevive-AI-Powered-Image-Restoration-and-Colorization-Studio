@@ -112,23 +112,27 @@ export const AboutModal: React.FC<AboutModalProps> = ({
               </li>
               <li>
                 <strong style={{ color: "var(--text-primary)" }}>Adaptive Denoising:</strong> Non-Local
-                Means filtering with automatic noise-aware parameter scaling ($h \in [3, 15]$).
+                Means filtering with noise-aware parameter scaling and high-frequency texture residual preservation.
               </li>
               <li>
-                <strong style={{ color: "var(--text-primary)" }}>Archival Scratch Repair:</strong> Morphological
-                defect detection and OpenCV inpainting to eliminate physical cracks, dust spots, and handling creases.
+                <strong style={{ color: "var(--text-primary)" }}>Scratch Repair & Inpainting:</strong> Ridge
+                detection with LaMa Deep AI (Fast Fourier Convolutions) and OpenCV PDE inpainting.
               </li>
               <li>
                 <strong style={{ color: "var(--text-primary)" }}>Contrast & Sharpening:</strong> CLAHE on CIELAB L
                 channel and Laplacian unsharp masking.
               </li>
               <li>
-                <strong style={{ color: "var(--text-primary)" }}>AI Colorization & Model Registry:</strong> Deep
-                learning colorization (Zhang et al. ECCV 2016) with extensible model registry and render factor tuning.
+                <strong style={{ color: "var(--text-primary)" }}>Face Detail Enhancement:</strong> Localized
+                adaptive contrast and landmark sharpening preserving original facial identity.
               </li>
               <li>
-                <strong style={{ color: "var(--text-primary)" }}>AI Super-Resolution:</strong> FSRCNN
-                neural network upscaling by 2× or 4×.
+                <strong style={{ color: "var(--text-primary)" }}>AI Colorization & Chrominance Refiner:</strong> Deep
+                learning colorization with guided boundary snapping, chroma saturation tuning, and temperature balance.
+              </li>
+              <li>
+                <strong style={{ color: "var(--text-primary)" }}>AI Super-Resolution:</strong> Real-ESRGAN
+                x4+ deep residual network and FSRCNN neural upscaling.
               </li>
               <li>
                 <strong style={{ color: "var(--text-primary)" }}>Quality Assessment Dashboard:</strong> BRISQUE

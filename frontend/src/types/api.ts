@@ -49,10 +49,15 @@ export interface RestorationOptions {
   colorize: boolean;
   adaptive_denoise?: boolean;
   repair?: boolean;
+  inpaint_method?: "lama" | "telea" | "ns";
+  face_restore?: boolean;
   upscale?: boolean;
   scale?: number;
+  sr_model?: "fsrcnn" | "realesrgan";
   colorization_model?: string;
   render_factor?: number;
+  color_saturation?: number;
+  color_temperature?: number;
 }
 
 export interface QualityMetricsResponse {

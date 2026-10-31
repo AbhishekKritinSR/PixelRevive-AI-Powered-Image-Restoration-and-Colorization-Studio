@@ -157,6 +157,12 @@ def colorize_image(
     net: cv2.dnn.Net,
     render_factor: int = DEFAULT_RENDER_FACTOR,
     saturation_gamma: float = SATURATION_GAMMA,
+    saturation: float = 0.85,
+    color_temperature: float = 0.0,
+    edge_refinement: bool = True,
+    shadow_attenuation: bool = True,
+    color_saturation: Optional[float] = None,
+    **kwargs,
 ) -> np.ndarray:
     """Colorize a BGR uint8 image using a loaded Caffe colorization network.
 
@@ -167,8 +173,11 @@ def colorize_image(
     3. Feeds L into the network to predict the probability distribution over 313 (a, b) bins.
     4. Computes the annealed mean of (a, b) chrominance channels.
     5. Upsamples predicted ab channels to the original image dimensions.
-    6. Recombines original uncompromised L with predicted ab channels.
-    7. Converts reconstructed LAB to BGR, clamps to [0.0, 1.0], and boosts saturation.
+    6. Refines chrominance boundaries via guided filtering aligned to original L structure.
+    7. Adjusts saturation and chromatic balance to eliminate oversaturated red/yellow cast.
+    8. Attenuates chromatic noise in deep shadows and highlights.
+    9. Recombines original uncompromised L with refined ab channels.
+    10. Converts reconstructed LAB to BGR and clamps to [0.0, 1.0].
 
     Args:
         image:
@@ -179,6 +188,14 @@ def colorize_image(
             Integer render factor between 10 and 40 (default 14 -> 224x224).
         saturation_gamma:
             Gamma curve power applied to BGR output (default 0.9).
+        saturation:
+            Chroma saturation factor in LAB space (default 0.85 for natural tones).
+        color_temperature:
+            Temperature bias factor (-1.0 to 1.0, default 0.0).
+        edge_refinement:
+            Whether to align chrominance edges to luminance boundaries via guided filter.
+        shadow_attenuation:
+            Whether to desaturate deep shadows and specular highlights.
 
     Returns:
         Colorized BGR image as a float32 NumPy array in range [0.0, 1.0].
@@ -189,6 +206,9 @@ def colorize_image(
         raise ValueError(
             f"Expected a 3-channel color image (H, W, 3), but got shape {image.shape}."
         )
+
+    if color_saturation is not None:
+        saturation = color_saturation
 
     # Validate render factor parameter
     validated_factor = validate_render_factor(render_factor)
@@ -221,6 +241,32 @@ def colorize_image(
     # Resize original L channel to original image dimensions (safeguard)
     L = cv2.resize(L, (image.shape[1], image.shape[0]))
 
+    # 1. Edge-Preserving Chrominance Alignment (Guided Filtering)
+    if edge_refinement and hasattr(cv2, "ximgproc") and hasattr(cv2.ximgproc, "guidedFilter"):
+        try:
+            L_guide = np.clip(L * 2.55, 0, 255).astype(np.uint8)
+            ab_a = np.ascontiguousarray(ab[:, :, 0], dtype=np.float32)
+            ab_b = np.ascontiguousarray(ab[:, :, 1], dtype=np.float32)
+            a_ref = cv2.ximgproc.guidedFilter(guide=L_guide, src=ab_a, radius=6, eps=100.0)
+            b_ref = cv2.ximgproc.guidedFilter(guide=L_guide, src=ab_b, radius=6, eps=100.0)
+            ab = np.stack([a_ref, b_ref], axis=2)
+        except Exception:
+            pass
+
+    # 2. Temperature and White Balance Compensation (positive = warm/yellow-red, negative = cool/blue)
+    if color_temperature != 0.0:
+        ab[:, :, 1] += float(color_temperature * 4.0)
+        ab[:, :, 0] += float(color_temperature * 1.5)
+
+    # 3. Saturation Tuning in CIE LAB Space
+    if saturation != 1.0 and saturation >= 0.0:
+        ab = ab * float(saturation)
+
+    # 4. Shadow and Highlight Desaturation to Prevent Chromatic Blotches
+    if shadow_attenuation:
+        fade = np.clip((L - 8.0) / 12.0, 0.0, 1.0) * np.clip((95.0 - L) / 8.0, 0.0, 1.0)
+        ab = ab * fade[:, :, np.newaxis]
+
     # Recombine original full-resolution L with CNN-predicted ab channels
     colorized = np.concatenate((L[:, :, np.newaxis], ab), axis=2)
 
@@ -228,12 +274,11 @@ def colorize_image(
     colorized = cv2.cvtColor(colorized, cv2.COLOR_LAB2BGR)
 
     # Defensive clipping: LAB -> BGR can produce values slightly outside [0.0, 1.0]
-    # when predicted (a, b) coordinates are near gamut boundaries. Clamping prevents
-    # negative values from becoming NaN during fractional power operations.
     colorized = np.clip(colorized, 0, 1)
 
-    # Slight saturation boost via gamma power curve
-    colorized = np.power(colorized, saturation_gamma)
+    # Saturation boost via gamma power curve if specified
+    if saturation_gamma != 1.0:
+        colorized = np.power(colorized, saturation_gamma)
 
     return colorized
 
@@ -294,5 +339,5 @@ class ZhangCaffeColorizer(BaseColorizer):
         if target_net is None:
             self.load_model()
             target_net = self._net
-        return colorize_image(image_bgr, target_net, render_factor=render_factor)
+        return colorize_image(image_bgr, target_net, render_factor=render_factor, **kwargs)
 

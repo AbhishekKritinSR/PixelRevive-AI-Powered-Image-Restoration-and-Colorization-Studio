@@ -54,6 +54,52 @@ class ModelService:
         """
         name = (model_name or self._default_model).lower().strip()
 
+        # Handle LaMa inpainting model
+        if name in ("lama", "lama_inpaint"):
+            lama_path = settings.MODEL_DIR / "lama_fp32.onnx" if hasattr(settings, "MODEL_DIR") else Path("model/lama_fp32.onnx")
+            files_present = lama_path.is_file()
+            from backend.src.processing.restoration.inpainter_lama import LaMaInpainter
+            loaded = LaMaInpainter.get_instance().is_loaded
+
+            detail = (
+                "LaMa ONNX model loaded and ready for deep neural inpainting."
+                if loaded
+                else "LaMa ONNX model weights present on disk; loads lazily on first inpaint request."
+                if files_present
+                else "LaMa ONNX model file 'lama_fp32.onnx' missing from disk."
+            )
+            return ModelStatusResponse(
+                model_name="lama",
+                files_available=files_present,
+                is_loaded=loaded,
+                ready_for_inference=files_present,
+                is_default=False,
+                detail=detail,
+            )
+
+        # Handle Real-ESRGAN super-resolution model
+        if name in ("realesrgan", "realesrgan_x4"):
+            re_path = Path("model/realesrgan-x4plus.onnx")
+            files_present = re_path.is_file()
+            from backend.src.processing.restoration.sr_realesrgan import RealESRGANUpscaler
+            loaded = RealESRGANUpscaler.get_instance().is_loaded
+
+            detail = (
+                "Real-ESRGAN x4plus loaded in memory and ready for inference."
+                if loaded
+                else "Real-ESRGAN x4plus weights present on disk; loads lazily on request."
+                if files_present
+                else "Real-ESRGAN weight file 'realesrgan-x4plus.onnx' missing from disk."
+            )
+            return ModelStatusResponse(
+                model_name="realesrgan",
+                files_available=files_present,
+                is_loaded=loaded,
+                ready_for_inference=files_present,
+                is_default=False,
+                detail=detail,
+            )
+
         # Handle super-resolution models
         if name in ("fsrcnn_x2", "fsrcnn_x4"):
             scale = 2 if name == "fsrcnn_x2" else 4

@@ -154,6 +154,11 @@ export async function restoreSingleImage(
   formData.append("scale", String(options.scale ?? 2));
   formData.append("colorization_model", options.colorization_model || "zhang_caffe");
   formData.append("render_factor", String(options.render_factor ?? 14));
+  formData.append("inpaint_method", options.inpaint_method || "lama");
+  formData.append("face_restore", String(options.face_restore ?? false));
+  formData.append("sr_model", options.sr_model || "fsrcnn");
+  formData.append("color_saturation", String(options.color_saturation ?? 0.85));
+  formData.append("color_temperature", String(options.color_temperature ?? 0.0));
 
   const response = await fetch(`${API_BASE_URL}/api/v1/restoration/process`, {
     method: "POST",
@@ -195,6 +200,11 @@ export async function restoreBatchImages(
   formData.append("scale", String(options.scale ?? 2));
   formData.append("colorization_model", options.colorization_model || "zhang_caffe");
   formData.append("render_factor", String(options.render_factor ?? 14));
+  formData.append("inpaint_method", options.inpaint_method || "lama");
+  formData.append("face_restore", String(options.face_restore ?? false));
+  formData.append("sr_model", options.sr_model || "fsrcnn");
+  formData.append("color_saturation", String(options.color_saturation ?? 0.85));
+  formData.append("color_temperature", String(options.color_temperature ?? 0.0));
 
   const response = await fetch(`${API_BASE_URL}/api/v1/restoration/batch`, {
     method: "POST",
