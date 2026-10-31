@@ -3,8 +3,8 @@ PIXELREVIVE PHASE 3: MASTER BENCHMARK SUMMARY
 ================================================================================
 
 Category A (Scratch Detection F1):    0.1129 (IoU: 0.0599)
-Category A (Telea Inpaint PSNR):       21.22 dB (2.17 ms)
-Category A (LaMa Inpaint PSNR):        21.4 dB (21924.48 ms)
+Category A (Telea Inpaint PSNR):       21.22 dB (1.63 ms)
+Category A (LaMa Inpaint PSNR):        21.4 dB (21470.23 ms)
 Category B (Denoising PSNR Delta):     +9.92 dB (SSIM: +0.6161)
 Category B (Texture Retention Ratio):  0.996
 Category C (Face Enhancement Delta):   Sharpness +49.12, Contrast +1.25
