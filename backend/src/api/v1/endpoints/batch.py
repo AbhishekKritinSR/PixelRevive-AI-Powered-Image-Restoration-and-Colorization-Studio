@@ -47,6 +47,14 @@ def process_batch_images(
         default=2,
         description="Super-resolution scaling factor (2 or 4)",
     ),
+    colorization_model: str = Form(
+        default="zhang_caffe",
+        description="Colorization model identifier ('zhang_caffe')",
+    ),
+    render_factor: int = Form(
+        default=14,
+        description="Colorization rendering factor (10 to 40, default 14)",
+    ),
     batch_service: BatchService = Depends(get_batch_service),
 ) -> BatchRestorationResponse:
     """Process multiple photographs in a batch.
@@ -62,6 +70,8 @@ def process_batch_images(
         repair=repair,
         upscale=upscale,
         scale=scale,
+        colorization_model=colorization_model,
+        render_factor=render_factor,
     )
 
     files_data = [(f.filename or f"image_{idx}.png", f.file.read()) for idx, f in enumerate(files)]

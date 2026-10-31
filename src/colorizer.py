@@ -7,10 +7,14 @@ delegating to the modular implementation in `backend.src.processing.colorization
 from backend.src.processing.colorization.models.zhang_caffe import (
     colorize_image as colorize,
     load_caffe_model,
+    validate_render_factor,
 )
 from src.config import (
     CLUSTER_CENTER_BIAS,
+    DEFAULT_RENDER_FACTOR,
     LAB_L_MEAN_OFFSET,
+    MAX_RENDER_FACTOR,
+    MIN_RENDER_FACTOR,
     MODEL_PATH,
     NETWORK_INPUT_SIZE,
     NUM_AB_CLUSTERS,
@@ -32,6 +36,7 @@ def load_model():
 __all__ = [
     "load_model",
     "colorize",
+    "validate_render_factor",
     "PROTOTXT_PATH",
     "MODEL_PATH",
     "POINTS_PATH",
@@ -40,4 +45,7 @@ __all__ = [
     "NUM_AB_CLUSTERS",
     "CLUSTER_CENTER_BIAS",
     "SATURATION_GAMMA",
+    "MIN_RENDER_FACTOR",
+    "DEFAULT_RENDER_FACTOR",
+    "MAX_RENDER_FACTOR",
 ]

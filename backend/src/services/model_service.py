@@ -16,17 +16,21 @@ Dependencies:
 - backend.src.schemas.common.ModelStatusResponse
 """
 
-from typing import Optional
+from typing import List, Optional
 
 from backend.src.core.config import settings
-from backend.src.core.exceptions import ModelUnavailableError
+from backend.src.core.exceptions import ModelUnavailableError, UnsupportedColorizationModelError
 from backend.src.processing.colorization.base import BaseColorizer
 from backend.src.processing.colorization.factory import ColorizerFactory
 from backend.src.processing.restoration.super_resolution import (
     is_model_file_present,
     is_model_loaded,
 )
-from backend.src.schemas.common import ModelStatusResponse
+from backend.src.schemas.common import (
+    ModelRegistryItem,
+    ModelRegistryListResponse,
+    ModelStatusResponse,
+)
 
 
 class ModelService:
@@ -72,41 +76,118 @@ class ModelService:
                 files_available=files_present,
                 is_loaded=loaded,
                 ready_for_inference=files_present,
+                is_default=False,
                 detail=detail,
             )
 
-        # Default: Caffe colorization model
-        files_present = (
-            settings.PROTOTXT_PATH.is_file()
-            and settings.MODEL_PATH.is_file()
-            and settings.POINTS_PATH.is_file()
-        )
+        # Built-in or registered colorization models
+        if not ColorizerFactory.is_registered(name):
+            return ModelStatusResponse(
+                model_name=name,
+                files_available=False,
+                is_loaded=False,
+                ready_for_inference=False,
+                is_default=False,
+                detail=f"Model '{name}' is not registered in the colorization registry.",
+            )
 
+        meta = ColorizerFactory.get_metadata(name)
+
+        if name == "zhang_caffe":
+            files_present = (
+                settings.PROTOTXT_PATH.is_file()
+                and settings.MODEL_PATH.is_file()
+                and settings.POINTS_PATH.is_file()
+            )
+            is_loaded = False
+            if name in ColorizerFactory._instances:
+                is_loaded = ColorizerFactory._instances[name].is_loaded
+
+            ready = files_present
+            if not files_present:
+                missing = [
+                    p.name
+                    for p in (settings.PROTOTXT_PATH, settings.MODEL_PATH, settings.POINTS_PATH)
+                    if not p.is_file()
+                ]
+                detail = f"Model weight files missing from disk: {', '.join(missing)}."
+            elif not is_loaded:
+                detail = "Model files are present on disk. Model will load into memory on first colorization request."
+            else:
+                detail = "Model is loaded in memory and ready for inference."
+
+            return ModelStatusResponse(
+                model_name=name,
+                files_available=files_present,
+                is_loaded=is_loaded,
+                ready_for_inference=ready,
+                is_default=meta.is_default,
+                detail=detail,
+                metadata=meta.to_dict(),
+            )
+
+        # Custom registered colorizer
         is_loaded = False
+        files_present = False
         if name in ColorizerFactory._instances:
-            is_loaded = ColorizerFactory._instances[name].is_loaded
-
-        ready = files_present
-
-        detail = None
-        if not files_present:
-            missing = [
-                p.name
-                for p in (settings.PROTOTXT_PATH, settings.MODEL_PATH, settings.POINTS_PATH)
-                if not p.is_file()
-            ]
-            detail = f"Model weight files missing from disk: {', '.join(missing)}."
-        elif not is_loaded:
-            detail = "Model files are present on disk. Model will load into memory on first colorization request."
-        else:
-            detail = "Model is loaded in memory and ready for inference."
+            inst = ColorizerFactory._instances[name]
+            is_loaded = inst.is_loaded
+            files_present = inst.are_assets_present()
 
         return ModelStatusResponse(
             model_name=name,
             files_available=files_present,
             is_loaded=is_loaded,
-            ready_for_inference=ready,
-            detail=detail,
+            ready_for_inference=files_present,
+            is_default=meta.is_default,
+            detail=f"Custom model '{name}' registered in colorizer registry.",
+            metadata=meta.to_dict(),
+        )
+
+    def list_registered_models(self) -> ModelRegistryListResponse:
+        """Discover and list all registered colorization models with verified status and metadata."""
+        items: List[ModelRegistryItem] = []
+        for name in ColorizerFactory.list_supported_models():
+            meta = ColorizerFactory.get_metadata(name)
+            files_present = False
+            is_loaded = False
+
+            if name == "zhang_caffe":
+                files_present = (
+                    settings.PROTOTXT_PATH.is_file()
+                    and settings.MODEL_PATH.is_file()
+                    and settings.POINTS_PATH.is_file()
+                )
+                if name in ColorizerFactory._instances:
+                    is_loaded = ColorizerFactory._instances[name].is_loaded
+            else:
+                if name in ColorizerFactory._instances:
+                    inst = ColorizerFactory._instances[name]
+                    files_present = inst.are_assets_present()
+                    is_loaded = inst.is_loaded
+
+            items.append(
+                ModelRegistryItem(
+                    model_id=meta.model_id,
+                    display_name=meta.display_name,
+                    architecture=meta.architecture,
+                    authors=meta.authors,
+                    publication=meta.publication,
+                    model_format=meta.model_format,
+                    supported_task=meta.supported_task,
+                    is_default=meta.is_default,
+                    files_available=files_present,
+                    is_loaded=is_loaded,
+                    ready_for_inference=files_present,
+                    supported_parameters=meta.supported_parameters,
+                    runtime_requirements=meta.runtime_requirements,
+                    description=meta.description,
+                )
+            )
+
+        return ModelRegistryListResponse(
+            default_model=ColorizerFactory.get_default_model(),
+            models=items,
         )
 
     def get_colorizer(self, model_name: Optional[str] = None) -> BaseColorizer:

@@ -20,7 +20,7 @@ class MockFastColorizer(BaseColorizer):
     def load_model(self) -> None:
         pass
 
-    def colorize(self, image_bgr: np.ndarray) -> np.ndarray:
+    def colorize(self, image_bgr: np.ndarray, **kwargs) -> np.ndarray:
         return image_bgr.astype("float32") / 255.0
 
     @property
@@ -202,4 +202,60 @@ class TestRestorationEndpoints:
         response = client.post("/api/v1/restoration/process", files=files, data=data)
         assert response.status_code == 503
         assert "Model weights are missing" in response.json()["detail"]
+
+    def test_process_with_valid_render_factor(self, valid_png_bytes, monkeypatch):
+        model_service = get_model_service()
+        monkeypatch.setattr(model_service, "get_colorizer", lambda name: MockFastColorizer())
+
+        files = {"file": ("test.png", valid_png_bytes, "image/png")}
+        data = {
+            "colorize": "true",
+            "colorization_model": "zhang_caffe",
+            "render_factor": "20",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 200
+        json_data = response.json()
+        assert json_data["options_applied"]["render_factor"] == 20
+        assert json_data["options_applied"]["colorization_model"] == "zhang_caffe"
+
+    def test_process_with_unsupported_colorization_model_raises_400(self, valid_png_bytes):
+        files = {"file": ("test.png", valid_png_bytes, "image/png")}
+        data = {
+            "colorize": "true",
+            "colorization_model": "unknown_experimental_model",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 400
+        assert "Unsupported colorization model" in response.json()["detail"]
+
+    def test_process_with_invalid_render_factor_low_raises_400(self, valid_png_bytes):
+        files = {"file": ("test.png", valid_png_bytes, "image/png")}
+        data = {
+            "colorize": "true",
+            "render_factor": "5",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 400
+        assert "render_factor" in response.json()["detail"]
+
+    def test_process_with_invalid_render_factor_high_raises_400(self, valid_png_bytes):
+        files = {"file": ("test.png", valid_png_bytes, "image/png")}
+        data = {
+            "colorize": "true",
+            "render_factor": "45",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 400
+        assert "render_factor" in response.json()["detail"]
+
+    def test_process_colorize_disabled_ignores_model_name(self, valid_png_bytes):
+        files = {"file": ("test.png", valid_png_bytes, "image/png")}
+        data = {
+            "colorize": "false",
+            "colorization_model": "any_unregistered_model",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 200
+        assert response.json()["options_applied"]["colorize"] is False
 

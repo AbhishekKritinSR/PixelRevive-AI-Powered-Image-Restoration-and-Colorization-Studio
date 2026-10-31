@@ -85,3 +85,24 @@ class TestColorizerFactory:
         with pytest.raises(ValueError, match="must be a non-empty string"):
             ColorizerFactory.register("", CustomStubColorizer)
 
+    def test_metadata_retrieval_for_default_model(self):
+        meta = ColorizerFactory.get_metadata("zhang_caffe")
+        assert meta.model_id == "zhang_caffe"
+        assert meta.is_default is True
+        assert meta.authors == "Richard Zhang, Phillip Isola, Alexei A. Efros"
+        assert "render_factor" in meta.supported_parameters
+
+    def test_list_models_metadata(self):
+        metas = ColorizerFactory.list_models_metadata()
+        assert len(metas) >= 1
+        ids = [m.model_id for m in metas]
+        assert "zhang_caffe" in ids
+
+    def test_is_registered(self):
+        assert ColorizerFactory.is_registered("zhang_caffe") is True
+        assert ColorizerFactory.is_registered("unknown_model") is False
+
+    def test_get_metadata_unregistered_raises(self):
+        with pytest.raises(ValueError, match="Unsupported colorization model"):
+            ColorizerFactory.get_metadata("unknown_model")
+

@@ -20,12 +20,15 @@ from pathlib import Path
 from typing import List, Set
 
 from src.config import (
+    DEFAULT_RENDER_FACTOR,
     FSRCNN_X2_PATH,
     FSRCNN_X4_PATH,
     MAX_BATCH_FILES,
     MAX_IMAGE_DIMENSION,
+    MAX_RENDER_FACTOR,
     MAX_SUPER_RES_OUTPUT_DIMENSION,
     MAX_SUPER_RES_OUTPUT_PIXELS,
+    MIN_RENDER_FACTOR,
     MODEL_DIR,
     MODEL_PATH,
     POINTS_PATH,
@@ -68,6 +71,11 @@ class Settings:
     MAX_BATCH_FILES: int = MAX_BATCH_FILES          # 10 images cap
     MAX_SUPER_RES_OUTPUT_DIMENSION: int = MAX_SUPER_RES_OUTPUT_DIMENSION  # 4096px cap
     MAX_SUPER_RES_OUTPUT_PIXELS: int = MAX_SUPER_RES_OUTPUT_PIXELS        # 12 MP budget
+
+    # Colorization Tuning Parameters (from src.config)
+    MIN_RENDER_FACTOR: int = MIN_RENDER_FACTOR      # 10
+    DEFAULT_RENDER_FACTOR: int = DEFAULT_RENDER_FACTOR  # 14
+    MAX_RENDER_FACTOR: int = MAX_RENDER_FACTOR      # 40
 
     # Model Storage Paths (from src.config)
     PROJECT_ROOT: Path = PROJECT_ROOT

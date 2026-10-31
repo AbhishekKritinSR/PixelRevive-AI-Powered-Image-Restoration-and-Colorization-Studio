@@ -9,10 +9,23 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 
 from backend.src.api.dependencies import get_model_service
-from backend.src.schemas.common import ModelStatusResponse
+from backend.src.schemas.common import ModelRegistryListResponse, ModelStatusResponse
 from backend.src.services.model_service import ModelService
 
 router = APIRouter()
+
+
+@router.get(
+    "/models",
+    response_model=ModelRegistryListResponse,
+    summary="List Registered AI Colorization Models",
+    description="Discover all registered colorization models, supported tuning parameters, and runtime availability.",
+)
+def list_models(
+    model_service: ModelService = Depends(get_model_service),
+) -> ModelRegistryListResponse:
+    """Return all registered colorization models with structured metadata and availability."""
+    return model_service.list_registered_models()
 
 
 @router.get(

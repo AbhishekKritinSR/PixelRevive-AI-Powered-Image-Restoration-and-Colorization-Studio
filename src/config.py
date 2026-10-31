@@ -35,6 +35,12 @@ NUM_AB_CLUSTERS = 313         # quantized ab bins the model predicts over
 CLUSTER_CENTER_BIAS = 2.606   # bias term for the cluster-rebalancing layer
 SATURATION_GAMMA = 0.9        # slight saturation boost after LAB -> BGR
 
+# --- colorization rendering factor tuning -----------------------------
+# Resolution = render_factor * 16. Default 14 corresponds to 14 * 16 = 224px.
+MIN_RENDER_FACTOR = 10        # minimum supported rendering factor (160x160)
+DEFAULT_RENDER_FACTOR = 14    # default rendering factor (224x224 native input)
+MAX_RENDER_FACTOR = 40        # maximum supported rendering factor (640x640)
+
 # --- denoising ----------------------------------------------------------
 DENOISE_H = 8                 # filter strength, luminance
 DENOISE_H_COLOR = 8           # filter strength, color channels

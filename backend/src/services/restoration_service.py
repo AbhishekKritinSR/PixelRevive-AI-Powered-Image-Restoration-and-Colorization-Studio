@@ -43,8 +43,11 @@ from backend.src.core.config import settings
 from backend.src.core.exceptions import (
     CorruptedImageError,
     FileTooLargeError,
+    UnsupportedColorizationModelError,
     UnsupportedFormatError,
 )
+from backend.src.processing.colorization.factory import ColorizerFactory
+from backend.src.processing.colorization.models.zhang_caffe import validate_render_factor
 from backend.src.processing.evaluation.device import get_processing_device
 from backend.src.processing.evaluation.heuristics import (
     estimate_brightness,
@@ -175,8 +178,33 @@ class RestorationService:
 
         # 5. AI Colorization stage
         if options.colorize:
-            colorizer = self.model_service.get_colorizer("zhang_caffe")
-            colorized_float = colorizer.colorize(enhanced_bgr)
+            # Validate colorization model identifier
+            model_name = (options.colorization_model or "zhang_caffe").strip()
+            if not ColorizerFactory.is_registered(model_name):
+                available = ColorizerFactory.list_supported_models()
+                raise UnsupportedColorizationModelError(
+                    f"Unsupported colorization model: '{model_name}'. "
+                    f"Available models: {available}"
+                )
+
+            # Validate render_factor range
+            validate_render_factor(options.render_factor)
+
+            colorizer = self.model_service.get_colorizer(model_name)
+
+            # Pass render_factor if supported by colorizer signature
+            import inspect
+
+            sig = inspect.signature(colorizer.colorize)
+            if "render_factor" in sig.parameters or any(
+                p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+            ):
+                colorized_float = colorizer.colorize(
+                    enhanced_bgr, render_factor=options.render_factor
+                )
+            else:
+                colorized_float = colorizer.colorize(enhanced_bgr)
+
             # Convert float32 [0.0, 1.0] -> uint8 [0, 255]
             colorized_bgr = (colorized_float * 255.0).astype(np.uint8)
         else:

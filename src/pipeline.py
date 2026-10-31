@@ -13,7 +13,15 @@ from .colorizer import colorize
 from .enhancer import enhance_image
 
 
-def run_pipeline(image_rgb, net, denoise=True, contrast=True, sharpen=True, colorize_enabled=True):
+def run_pipeline(
+    image_rgb,
+    net,
+    denoise=True,
+    contrast=True,
+    sharpen=True,
+    colorize_enabled=True,
+    render_factor=14,
+):
     """Run the restoration + colorization pipeline on one RGB uint8 image.
 
     `net` is only used when colorize_enabled is True -- pass whatever
@@ -27,7 +35,7 @@ def run_pipeline(image_rgb, net, denoise=True, contrast=True, sharpen=True, colo
     enhanced = enhance_image(bgr, denoise=denoise, contrast=contrast, sharpen=sharpen)
 
     if colorize_enabled:
-        result = colorize(enhanced, net)
+        result = colorize(enhanced, net, render_factor=render_factor)
         result = (result * 255).astype("uint8")
     else:
         result = enhanced

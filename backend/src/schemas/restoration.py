@@ -32,6 +32,14 @@ class RestorationOptions(BaseModel):
         default=2,
         description="Super-resolution scaling factor (2 or 4)",
     )
+    colorization_model: str = Field(
+        default="zhang_caffe",
+        description="Identifier of the colorization model to use ('zhang_caffe')",
+    )
+    render_factor: int = Field(
+        default=14,
+        description="Colorization rendering factor between 10 and 40 (default 14 corresponds to native 224x224)",
+    )
 
 
 class SingleRestorationResponse(BaseModel):

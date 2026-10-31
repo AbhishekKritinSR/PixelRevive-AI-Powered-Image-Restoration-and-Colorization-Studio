@@ -47,6 +47,14 @@ def process_single_image(
         default=2,
         description="Super-resolution scaling factor (2 or 4)",
     ),
+    colorization_model: str = Form(
+        default="zhang_caffe",
+        description="Colorization model identifier ('zhang_caffe')",
+    ),
+    render_factor: int = Form(
+        default=14,
+        description="Colorization rendering factor (10 to 40, default 14)",
+    ),
     restoration_service: RestorationService = Depends(get_restoration_service),
 ) -> SingleRestorationResponse:
     """Restore and colorize an individual photograph.
@@ -65,6 +73,8 @@ def process_single_image(
         repair=repair,
         upscale=upscale,
         scale=scale,
+        colorization_model=colorization_model,
+        render_factor=render_factor,
     )
 
     response, _ = restoration_service.process_image(

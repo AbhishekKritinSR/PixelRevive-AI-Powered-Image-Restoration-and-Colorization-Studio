@@ -20,8 +20,12 @@ This module does not:
 """
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from .metadata import ColorizerMetadata
 
 
 class BaseColorizer(ABC):
@@ -45,13 +49,16 @@ class BaseColorizer(ABC):
         pass
 
     @abstractmethod
-    def colorize(self, image_bgr: np.ndarray) -> np.ndarray:
+    def colorize(self, image_bgr: np.ndarray, **kwargs) -> np.ndarray:
         """Colorize a BGR image using the loaded neural network model.
 
         Args:
             image_bgr:
                 Input image as a uint8 NumPy array of shape (height, width, 3).
                 May be grayscale (replicated to 3 identical channels) or color.
+            **kwargs:
+                Optional tuning parameters supported by the specific model
+                (e.g. render_factor).
 
         Returns:
             Colorized image as a float32 NumPy array with shape (height, width, 3),
@@ -76,4 +83,13 @@ class BaseColorizer(ABC):
     def is_loaded(self) -> bool:
         """Return True if model weights are loaded and ready for inference, False otherwise."""
         pass
+
+    @classmethod
+    def get_metadata(cls) -> Optional["ColorizerMetadata"]:
+        """Return structured metadata descriptor for this colorizer class."""
+        return getattr(cls, "metadata", None)
+
+    def are_assets_present(self) -> bool:
+        """Return True if required model asset files are physically present on disk."""
+        return True
 

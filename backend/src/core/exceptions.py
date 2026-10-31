@@ -54,6 +54,16 @@ class SuperResolutionResourceError(Exception):
     pass
 
 
+class UnsupportedColorizationModelError(ValueError):
+    """Raised when an unsupported colorization model identifier is requested."""
+    pass
+
+
+class InvalidRenderFactorError(ValueError):
+    """Raised when a colorization render factor is outside the supported range [10, 40]."""
+    pass
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register custom exception handlers on the FastAPI application instance.
 
@@ -106,6 +116,20 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(SuperResolutionResourceError)
     async def super_res_resource_handler(request: Request, exc: SuperResolutionResourceError):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(UnsupportedColorizationModelError)
+    async def unsupported_model_handler(request: Request, exc: UnsupportedColorizationModelError):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(InvalidRenderFactorError)
+    async def invalid_render_factor_handler(request: Request, exc: InvalidRenderFactorError):
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},
