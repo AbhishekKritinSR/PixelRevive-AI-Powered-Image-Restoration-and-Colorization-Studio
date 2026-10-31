@@ -1,12 +1,20 @@
-import React, { useState } from "react";
-import { Images, Download, Play, FileArchive } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Images, Play, FileArchive } from "lucide-react";
 import { BatchDropZone } from "../components/batch/BatchDropZone";
 import { BatchQueue, BatchFileEntry } from "../components/batch/BatchQueue";
 import { RestorationControls } from "../components/editor/RestorationControls";
 import { Button } from "../components/common/Button";
 import { ErrorBanner } from "../components/common/ErrorBanner";
-import { RestorationOptions, BatchRestorationResponse } from "../types/api";
-import { restoreBatchImages, downloadDataUri } from "../services/api";
+import {
+  RestorationOptions,
+  BatchRestorationResponse,
+  ModelRegistryItem,
+} from "../types/api";
+import {
+  restoreBatchImages,
+  downloadDataUri,
+  fetchModelRegistry,
+} from "../services/api";
 
 interface BatchRestorationViewProps {
   isModelReady: boolean;
@@ -16,13 +24,30 @@ export const BatchRestorationView: React.FC<BatchRestorationViewProps> = ({ isMo
   const [entries, setEntries] = useState<BatchFileEntry[]>([]);
   const [options, setOptions] = useState<RestorationOptions>({
     denoise: true,
+    adaptive_denoise: true,
     contrast: true,
     sharpen: true,
     colorize: true,
+    repair: false,
+    upscale: false,
+    scale: 2,
+    colorization_model: "zhang_caffe",
+    render_factor: 14,
   });
+  const [availableModels, setAvailableModels] = useState<ModelRegistryItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [batchResponse, setBatchResponse] = useState<BatchRestorationResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchModelRegistry()
+      .then((res) => {
+        if (res && res.models) {
+          setAvailableModels(res.models);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleFilesAdded = (newFiles: File[]) => {
     const newEntries: BatchFileEntry[] = newFiles.map((f) => ({
@@ -119,6 +144,7 @@ export const BatchRestorationView: React.FC<BatchRestorationViewProps> = ({ isMo
             onChange={setOptions}
             disabled={isProcessing}
             isModelReady={isModelReady}
+            availableModels={availableModels}
           />
 
           <Button
@@ -139,93 +165,19 @@ export const BatchRestorationView: React.FC<BatchRestorationViewProps> = ({ isMo
               icon={<FileArchive size={18} color="#34d399" />}
               onClick={handleDownloadZip}
             >
-              Download Batch ZIP ({batchResponse.total_succeeded} files)
+              Download Batch ZIP Archive
             </Button>
           )}
         </div>
 
-        {/* Right Column: Queue & Results */}
+        {/* Right Column: Batch Processing Queue List */}
         <div>
-          {batchResponse && (
-            <div
-              className="card"
-              style={{
-                marginBottom: "1.25rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: "1rem",
-              }}
-            >
-              <div>
-                <div style={{ fontSize: "1.125rem", fontWeight: 700 }}>
-                  Batch Processing Completed
-                </div>
-                <div style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginTop: "2px" }}>
-                  {batchResponse.total_succeeded} succeeded • {batchResponse.total_failed} failed •{" "}
-                  {(batchResponse.elapsed_seconds * 1000).toFixed(0)} ms total
-                </div>
-              </div>
-
-              {batchResponse.zip_base64 && (
-                <Button
-                  variant="primary"
-                  icon={<Download size={16} />}
-                  onClick={handleDownloadZip}
-                  style={{ padding: "0.45rem 1rem", fontSize: "0.875rem" }}
-                >
-                  Download All (ZIP)
-                </Button>
-              )}
-            </div>
-          )}
-
           <BatchQueue
             entries={entries}
             onRemove={handleRemove}
             onClearAll={handleClearAll}
             disabled={isProcessing}
           />
-
-          {entries.length === 0 && (
-            <div
-              className="card"
-              style={{
-                minHeight: "420px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                textAlign: "center",
-                padding: "3rem 1.5rem",
-              }}
-            >
-              <div
-                style={{
-                  width: "60px",
-                  height: "60px",
-                  borderRadius: "50%",
-                  background: "var(--bg-surface)",
-                  color: "var(--text-muted)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: "1.25rem",
-                }}
-              >
-                <Images size={30} />
-              </div>
-              <div style={{ fontSize: "1.125rem", fontWeight: 700, marginBottom: "0.5rem" }}>
-                Multi-Image Batch Queue
-              </div>
-              <div style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "420px", lineHeight: "1.6" }}>
-                Add up to 10 photographs to restore and colorize them in a single batch.
-                The system features isolated per-item error handling: individual corrupted photos will not
-                abort the remaining items.
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

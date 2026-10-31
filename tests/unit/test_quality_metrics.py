@@ -47,6 +47,25 @@ class TestBRISQUEEvaluation:
         assert isinstance(score, float)
         assert 0.0 <= score <= 100.0
 
+    def test_brisque_natural_scene_grayscale_nonzero(self):
+        """Verify that naturalistic photographic grayscale image produces realistic non-zero score."""
+        h, w = 128, 128
+        freq_y = np.fft.fftfreq(h)[:, None]
+        freq_x = np.fft.fftfreq(w)[None, :]
+        freq = np.sqrt(freq_y**2 + freq_x**2)
+        freq[0, 0] = 1.0
+        phase = np.random.RandomState(42).uniform(0, 2 * np.pi, (h, w))
+        spectrum = (1.0 / (freq ** 1.2)) * (np.cos(phase) + 1j * np.sin(phase))
+        spectrum[0, 0] = 0.0
+        field = np.real(np.fft.ifft2(spectrum))
+        field = (field - field.min()) / (field.max() - field.min()) * 255.0
+        gray = field.astype(np.uint8)
+
+        avail, score, interp = compute_brisque(gray)
+        assert avail is True
+        assert isinstance(score, float)
+        assert 10.0 <= score <= 90.0
+
     def test_brisque_deterministic_and_immutable(self):
         """Verify BRISQUE is deterministic and does not mutate input array."""
         img = np.random.randint(50, 200, (64, 64, 3), dtype=np.uint8)

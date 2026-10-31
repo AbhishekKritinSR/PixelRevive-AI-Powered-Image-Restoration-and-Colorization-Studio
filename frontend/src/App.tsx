@@ -48,8 +48,8 @@ export const App: React.FC = () => {
         <div className="hero-banner">
           <h1 className="hero-title">PixelRevive – AI-Powered Image Restoration</h1>
           <p className="hero-subtitle">
-            Restore vintage and damaged photographs using Non-Local Means denoising,
-            adaptive CLAHE contrast recovery, Laplacian sharpening, and Caffe deep learning colorization.
+            Restore vintage and damaged photographs using adaptive denoising, CLAHE contrast recovery,
+            archival scratch inpainting, FSRCNN super-resolution, and Caffe deep colorization with perceptual quality assessment.
           </p>
         </div>
 

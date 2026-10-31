@@ -15,7 +15,31 @@ export interface ModelStatusResponse {
   files_available: boolean;
   is_loaded: boolean;
   ready_for_inference: boolean;
-  detail: string;
+  is_default?: boolean;
+  detail?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface ModelRegistryItem {
+  model_id: string;
+  display_name: string;
+  architecture: string;
+  authors: string;
+  publication: string;
+  model_format: string;
+  supported_task: string;
+  is_default: boolean;
+  files_available: boolean;
+  is_loaded: boolean;
+  ready_for_inference: boolean;
+  supported_parameters: Record<string, unknown>;
+  runtime_requirements: string;
+  description: string;
+}
+
+export interface ModelRegistryListResponse {
+  default_model: string;
+  models: ModelRegistryItem[];
 }
 
 export interface RestorationOptions {
@@ -23,6 +47,12 @@ export interface RestorationOptions {
   contrast: boolean;
   sharpen: boolean;
   colorize: boolean;
+  adaptive_denoise?: boolean;
+  repair?: boolean;
+  upscale?: boolean;
+  scale?: number;
+  colorization_model?: string;
+  render_factor?: number;
 }
 
 export interface QualityMetricsResponse {
@@ -75,3 +105,94 @@ export interface ApiErrorDetail {
   detail: string | Array<{ loc: string[]; msg: string; type: string }>;
 }
 
+// =====================================================================
+// Phase 5.1 Image Analysis Schemas
+// =====================================================================
+
+export interface ImageDimensions {
+  width: number;
+  height: number;
+  channels: number;
+  was_resized: boolean;
+}
+
+export interface NoiseAnalysis {
+  noise_score: number;
+  noise_level: "low" | "medium" | "high";
+  method: string;
+}
+
+export interface SharpnessAnalysis {
+  sharpness_score: number;
+  sharpness_level: "blurry" | "moderate" | "sharp";
+}
+
+export interface ContrastAnalysis {
+  contrast_score: number;
+  dynamic_range: number;
+  contrast_level: "low" | "moderate" | "high";
+}
+
+export interface MonochromeAnalysis {
+  is_monochrome: boolean;
+  color_variation_score: number;
+  confidence: number;
+}
+
+export interface RecommendationItem {
+  recommended: boolean;
+  reason: string;
+  evidence: string;
+}
+
+export interface RestorationRecommendations {
+  denoise: RecommendationItem;
+  contrast: RecommendationItem;
+  sharpen: RecommendationItem;
+  colorize: RecommendationItem;
+}
+
+export interface AnalysisMetrics {
+  noise: NoiseAnalysis;
+  sharpness: SharpnessAnalysis;
+  contrast: ContrastAnalysis;
+  monochrome: MonochromeAnalysis;
+}
+
+export interface ImageAnalysisResponse {
+  status: string;
+  filename: string;
+  image: ImageDimensions;
+  analysis: AnalysisMetrics;
+  detected_issues: string[];
+  recommended_options: RestorationRecommendations;
+  elapsed_seconds: number;
+}
+
+// =====================================================================
+// Phase 5.6 Quality Assessment Schemas
+// =====================================================================
+
+export interface MetricDetail {
+  metric_id: string;
+  display_name: string;
+  available: boolean;
+  score: number | null;
+  interpretation: string;
+  details?: Record<string, unknown> | null;
+}
+
+export interface QualityImageDimensions {
+  width: number;
+  height: number;
+  channels: number;
+}
+
+export interface ImageQualityAssessmentResponse {
+  status: string;
+  filename: string;
+  reference_filename?: string | null;
+  image: QualityImageDimensions;
+  elapsed_seconds: number;
+  metrics: Record<string, MetricDetail>;
+}

@@ -1,14 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sparkles, Download, Layers, Columns, Image as ImageIcon, Loader2 } from "lucide-react";
 import { DropZone } from "../components/upload/DropZone";
 import { RestorationControls } from "../components/editor/RestorationControls";
+import { ImageAnalysisPanel } from "../components/analysis/ImageAnalysisPanel";
 import { ImageSlider } from "../components/comparison/ImageSlider";
 import { SplitView } from "../components/comparison/SplitView";
 import { QualityMetricsPanel } from "../components/metrics/QualityMetricsPanel";
+import { QualityDashboard } from "../components/metrics/QualityDashboard";
 import { Button } from "../components/common/Button";
 import { ErrorBanner } from "../components/common/ErrorBanner";
-import { RestorationOptions, SingleRestorationResponse } from "../types/api";
-import { restoreSingleImage, downloadDataUri } from "../services/api";
+import {
+  RestorationOptions,
+  SingleRestorationResponse,
+  ModelRegistryItem,
+} from "../types/api";
+import {
+  restoreSingleImage,
+  downloadDataUri,
+  fetchModelRegistry,
+} from "../services/api";
 
 interface SingleRestorationViewProps {
   isModelReady: boolean;
@@ -19,14 +29,34 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [options, setOptions] = useState<RestorationOptions>({
     denoise: true,
+    adaptive_denoise: true,
     contrast: true,
     sharpen: true,
     colorize: true,
+    repair: false,
+    upscale: false,
+    scale: 2,
+    colorization_model: "zhang_caffe",
+    render_factor: 14,
   });
+  const [availableModels, setAvailableModels] = useState<ModelRegistryItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<SingleRestorationResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"slider" | "split">("slider");
+
+  useEffect(() => {
+    // Fetch registered models for the model selector
+    fetchModelRegistry()
+      .then((res) => {
+        if (res && res.models) {
+          setAvailableModels(res.models);
+        }
+      })
+      .catch(() => {
+        // Fallback default model already handled in RestorationControls
+      });
+  }, []);
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
@@ -46,6 +76,13 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
     setOriginalUrl(null);
     setResult(null);
     setErrorMessage(null);
+  };
+
+  const handleApplyRecommendations = (recommended: Partial<RestorationOptions>) => {
+    setOptions((prev) => ({
+      ...prev,
+      ...recommended,
+    }));
   };
 
   const handleProcess = async () => {
@@ -79,7 +116,7 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
       <ErrorBanner message={errorMessage} onDismiss={() => setErrorMessage(null)} />
 
       <div className="workspace-grid">
-        {/* Left Column: Upload & Configuration Controls */}
+        {/* Left Column: Upload, Image Analysis & Configuration Controls */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           <DropZone
             selectedFile={selectedFile}
@@ -88,11 +125,22 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
             disabled={isProcessing}
           />
 
+          {/* Phase 5.1 Intelligent Analysis Panel */}
+          {selectedFile && (
+            <ImageAnalysisPanel
+              file={selectedFile}
+              onApplyRecommendations={handleApplyRecommendations}
+              disabled={isProcessing}
+            />
+          )}
+
+          {/* Enhanced Restoration Controls */}
           <RestorationControls
             options={options}
             onChange={setOptions}
             disabled={isProcessing}
             isModelReady={isModelReady}
+            availableModels={availableModels}
           />
 
           <Button
@@ -107,7 +155,7 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
           </Button>
         </div>
 
-        {/* Right Column: Comparison, Results & Metrics */}
+        {/* Right Column: Comparison, Results, Metrics & Quality Dashboard */}
         <div>
           {isProcessing ? (
             <div
@@ -139,9 +187,11 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
               <div style={{ fontSize: "1.125rem", fontWeight: 700 }}>
                 Applying Computer Vision Pipeline...
               </div>
-              <div style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "340px" }}>
-                Running Non-Local Means denoising, CLAHE contrast equalization, Laplacian sharpening,
-                and Caffe deep convolutional colorization.
+              <div style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "380px", lineHeight: "1.5" }}>
+                Running Non-Local Means denoising, CLAHE contrast recovery, Laplacian sharpening
+                {options.repair ? ", archival scratch inpainting" : ""}
+                {options.colorize ? ", neural deep colorization" : ""}
+                {options.upscale ? `, and FSRCNN ${options.scale ?? 2}× super-resolution` : ""}.
               </div>
             </div>
           ) : result && originalUrl ? (
@@ -192,7 +242,13 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
                   originalUrl={originalUrl}
                   processedUrl={result.image_base64}
                   originalLabel="Original"
-                  processedLabel={options.colorize ? "Restored & Colorized" : "Restored"}
+                  processedLabel={
+                    options.upscale
+                      ? `Restored (${options.scale ?? 2}× Super-Res)`
+                      : options.colorize
+                      ? "Restored & Colorized"
+                      : "Restored"
+                  }
                 />
               ) : (
                 <SplitView
@@ -201,7 +257,7 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
                 />
               )}
 
-              {/* Quality Metrics */}
+              {/* Core Quality Metrics */}
               <QualityMetricsPanel
                 metrics={result.metrics}
                 originalWidth={result.original_width}
@@ -209,6 +265,13 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
                 processedWidth={result.processed_width}
                 processedHeight={result.processed_height}
                 wasResized={result.was_resized}
+              />
+
+              {/* Phase 5.6 Advanced Image Quality Assessment Dashboard */}
+              <QualityDashboard
+                originalFile={selectedFile}
+                restoredDataUri={result.image_base64}
+                disabled={isProcessing}
               />
             </div>
           ) : (
@@ -242,9 +305,10 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
               <div style={{ fontSize: "1.125rem", fontWeight: 700, marginBottom: "0.5rem" }}>
                 Interactive Restoration Workspace
               </div>
-              <div style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "420px", lineHeight: "1.6" }}>
-                Upload a damaged, noisy, or monochrome photograph to begin. Once processed, an interactive
-                before-and-after slider will allow you to inspect pixel recovery and color transitions in real time.
+              <div style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "440px", lineHeight: "1.6" }}>
+                Upload a damaged, noisy, or vintage monochrome photograph to begin. Run intelligent diagnostics
+                to inspect noise and sharpness, adjust restoration toggles, or compare before-and-after
+                results with the interactive slider and scientific quality dashboard.
               </div>
             </div>
           )}
@@ -253,4 +317,3 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
     </div>
   );
 };
-

@@ -6,9 +6,12 @@
 import {
   HealthResponse,
   ModelStatusResponse,
+  ModelRegistryListResponse,
   RestorationOptions,
   SingleRestorationResponse,
   BatchRestorationResponse,
+  ImageAnalysisResponse,
+  ImageQualityAssessmentResponse,
 } from "../types/api";
 
 const API_BASE_URL =
@@ -71,7 +74,69 @@ export async function fetchModelStatus(): Promise<ModelStatusResponse> {
 }
 
 /**
- * Restore and colorize an individual photograph.
+ * Retrieve registered colorization and restoration models from the model registry.
+ */
+export async function fetchModelRegistry(): Promise<ModelRegistryListResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/models`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error(await parseErrorResponse(response));
+  }
+  return (await response.json()) as ModelRegistryListResponse;
+}
+
+/**
+ * Analyze an uploaded photograph for noise, sharpness, contrast, and monochrome characteristics.
+ * Returns empirical diagnostics and rule-based restoration recommendations.
+ */
+export async function analyzeImage(file: File): Promise<ImageAnalysisResponse> {
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/restoration/analyze`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseErrorResponse(response));
+  }
+
+  return (await response.json()) as ImageAnalysisResponse;
+}
+
+/**
+ * Assess photographic image quality via BRISQUE, SSIM, and Colorfulness.
+ */
+export async function assessQuality(
+  targetFile: File | Blob,
+  targetFilename: string = "target.png",
+  referenceFile?: File | Blob | null,
+  referenceFilename: string = "reference.png"
+): Promise<ImageQualityAssessmentResponse> {
+  const formData = new FormData();
+  formData.append("file", targetFile, targetFilename);
+
+  if (referenceFile) {
+    formData.append("reference_file", referenceFile, referenceFilename);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/restoration/quality`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseErrorResponse(response));
+  }
+
+  return (await response.json()) as ImageQualityAssessmentResponse;
+}
+
+/**
+ * Restore and colorize an individual photograph with extended Phase 5 parameters.
  */
 export async function restoreSingleImage(
   file: File,
@@ -83,6 +148,12 @@ export async function restoreSingleImage(
   formData.append("contrast", String(options.contrast));
   formData.append("sharpen", String(options.sharpen));
   formData.append("colorize", String(options.colorize));
+  formData.append("adaptive_denoise", String(options.adaptive_denoise ?? true));
+  formData.append("repair", String(options.repair ?? false));
+  formData.append("upscale", String(options.upscale ?? false));
+  formData.append("scale", String(options.scale ?? 2));
+  formData.append("colorization_model", options.colorization_model || "zhang_caffe");
+  formData.append("render_factor", String(options.render_factor ?? 14));
 
   const response = await fetch(`${API_BASE_URL}/api/v1/restoration/process`, {
     method: "POST",
@@ -97,7 +168,7 @@ export async function restoreSingleImage(
 }
 
 /**
- * Process a batch of up to 10 images with per-item fault tolerance.
+ * Process a batch of up to 10 images with per-item fault tolerance and extended options.
  */
 export async function restoreBatchImages(
   files: File[],
@@ -118,6 +189,12 @@ export async function restoreBatchImages(
   formData.append("contrast", String(options.contrast));
   formData.append("sharpen", String(options.sharpen));
   formData.append("colorize", String(options.colorize));
+  formData.append("adaptive_denoise", String(options.adaptive_denoise ?? true));
+  formData.append("repair", String(options.repair ?? false));
+  formData.append("upscale", String(options.upscale ?? false));
+  formData.append("scale", String(options.scale ?? 2));
+  formData.append("colorization_model", options.colorization_model || "zhang_caffe");
+  formData.append("render_factor", String(options.render_factor ?? 14));
 
   const response = await fetch(`${API_BASE_URL}/api/v1/restoration/batch`, {
     method: "POST",
@@ -132,6 +209,24 @@ export async function restoreBatchImages(
 }
 
 /**
+ * Convert a Base64 data URI (e.g. "data:image/png;base64,...") to a Blob.
+ */
+export function dataUriToBlob(dataUri: string): Blob {
+  const parts = dataUri.split(",");
+  const byteString = atob(parts[1]);
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mimeString = mimeMatch ? mimeMatch[1] : "image/png";
+
+  const arrayBuffer = new ArrayBuffer(byteString.length);
+  const uint8Array = new Uint8Array(arrayBuffer);
+  for (let i = 0; i < byteString.length; i++) {
+    uint8Array[i] = byteString.charCodeAt(i);
+  }
+
+  return new Blob([uint8Array], { type: mimeString });
+}
+
+/**
  * Client-side helper to trigger file download from a Base64 Data URI.
  */
 export function downloadDataUri(dataUri: string, filename: string): void {
@@ -142,4 +237,3 @@ export function downloadDataUri(dataUri: string, filename: string): void {
   anchor.click();
   document.body.removeChild(anchor);
 }
-
