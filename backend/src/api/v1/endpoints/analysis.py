@@ -39,3 +39,4 @@ def analyze_image(
         file_bytes=file_bytes,
         filename=filename,
     )
+

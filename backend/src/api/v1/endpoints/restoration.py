@@ -31,6 +31,10 @@ def process_single_image(
     contrast: bool = Form(default=True, description="Apply CLAHE contrast enhancement on L channel"),
     sharpen: bool = Form(default=True, description="Apply unity-gain Laplacian sharpening"),
     colorize: bool = Form(default=True, description="Apply AI deep convolutional colorization"),
+    adaptive_denoise: bool = Form(
+        default=True,
+        description="Intelligently adapt denoising strength based on estimated image noise level (when denoise is True)",
+    ),
     restoration_service: RestorationService = Depends(get_restoration_service),
 ) -> SingleRestorationResponse:
     """Restore and colorize an individual photograph.
@@ -45,6 +49,7 @@ def process_single_image(
         contrast=contrast,
         sharpen=sharpen,
         colorize=colorize,
+        adaptive_denoise=adaptive_denoise,
     )
 
     response, _ = restoration_service.process_image(

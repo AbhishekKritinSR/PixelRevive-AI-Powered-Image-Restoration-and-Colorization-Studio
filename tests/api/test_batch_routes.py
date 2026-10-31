@@ -63,3 +63,22 @@ class TestBatchEndpoints:
         assert response.status_code == 400
         assert "exceeds the maximum allowed limit of 10 images" in response.json()["detail"]
 
+    def test_process_batch_with_adaptive_denoise(self, sample_png):
+        files = [
+            ("files", ("clean_img.png", sample_png, "image/png")),
+            ("files", ("second_img.png", sample_png, "image/png")),
+        ]
+        data = {
+            "denoise": "true",
+            "adaptive_denoise": "true",
+            "colorize": "false",
+        }
+        response = client.post("/api/v1/restoration/batch", files=files, data=data)
+        assert response.status_code == 200
+        json_data = response.json()
+        assert json_data["total_succeeded"] == 2
+        assert len(json_data["items"]) == 2
+        assert json_data["items"][0]["status"] == "success"
+        assert json_data["items"][1]["status"] == "success"
+        assert json_data["zip_base64"].startswith("data:application/zip;base64,")
+

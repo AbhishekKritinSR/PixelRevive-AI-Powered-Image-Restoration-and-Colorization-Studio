@@ -16,6 +16,10 @@ class RestorationOptions(BaseModel):
     contrast: bool = Field(default=True, description="Enable CLAHE contrast enhancement on L channel")
     sharpen: bool = Field(default=True, description="Enable unity-gain Laplacian sharpening")
     colorize: bool = Field(default=True, description="Enable AI deep convolutional colorization")
+    adaptive_denoise: bool = Field(
+        default=True,
+        description="Whether to intelligently adapt denoising strength based on image noise level (when denoise=True)",
+    )
 
 
 class SingleRestorationResponse(BaseModel):

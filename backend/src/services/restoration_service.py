@@ -168,6 +168,7 @@ class RestorationService:
             denoise=options.denoise,
             contrast=options.contrast,
             sharpen=options.sharpen,
+            adaptive_denoise=options.adaptive_denoise,
         )
 
         # 5. AI Colorization stage

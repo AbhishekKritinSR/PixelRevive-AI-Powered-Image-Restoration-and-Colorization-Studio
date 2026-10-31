@@ -94,3 +94,59 @@ def estimate_brightness(image: np.ndarray) -> float:
     gray = _to_gray(image)
     return float(gray.mean())
 
+
+NOISE_LOW_THRESHOLD: float = 4.0
+NOISE_HIGH_THRESHOLD: float = 10.0
+
+NOISE_KERNEL: np.ndarray = np.array(
+    [[1.0, -2.0, 1.0], [-2.0, 4.0, -2.0], [1.0, -2.0, 1.0]],
+    dtype=np.float32,
+)
+
+
+def estimate_noise_sigma(image: np.ndarray) -> tuple[float, str]:
+    """Estimate blind noise standard deviation (sigma) using an Immerkær Laplacian operator.
+
+    The operator convolves the grayscale luminance image with a normalized 3x3 difference
+    mask and computes robust mean absolute deviation excluding outer boundary pixels.
+
+    Args:
+        image: RGB/BGR uint8 array (H, W, 3) or grayscale (H, W).
+
+    Returns:
+        Tuple of (sigma: float, qualitative_level: str) where level is 'low', 'medium', or 'high'.
+    """
+    if not isinstance(image, np.ndarray):
+        raise ValueError("Input image must be a valid NumPy array.")
+
+    gray = _to_gray(image)
+    h, w = gray.shape[:2]
+
+    if h < 3 or w < 3:
+        return 0.0, "low"
+
+    gray_f = gray.astype(np.float32)
+    conv = cv2.filter2D(gray_f, -1, NOISE_KERNEL, borderType=cv2.BORDER_CONSTANT)
+
+    inner = conv[1:-1, 1:-1]
+    sum_abs = float(np.sum(np.abs(inner)))
+
+    inner_count = (w - 2) * (h - 2)
+    if inner_count <= 0:
+        return 0.0, "low"
+
+    norm_factor = np.sqrt(np.pi / 2.0) / (6.0 * inner_count)
+    sigma = float(sum_abs * norm_factor)
+
+    if np.isnan(sigma) or np.isinf(sigma):
+        sigma = 0.0
+
+    if sigma < NOISE_LOW_THRESHOLD:
+        level = "low"
+    elif sigma < NOISE_HIGH_THRESHOLD:
+        level = "medium"
+    else:
+        level = "high"
+
+    return round(sigma, 2), level
+

@@ -1,37 +1,36 @@
 """Module: denoiser.py
 
 Purpose:
-Provides edge-preserving image denoising using OpenCV's Non-Local Means algorithm.
+Provides edge-preserving image denoising using OpenCV's Non-Local Means algorithm,
+supporting both fixed-parameter execution and intelligent, noise-adaptive parameter selection.
 
 Responsibilities:
-- Validate input image format and dimensions.
-- Apply Non-Local Means color denoising (cv2.fastNlMeansDenoisingColored).
-- Return the denoised image preserving array shape, dtype (uint8), and color space (BGR).
-
-Inputs:
-- image: 3-channel BGR uint8 NumPy array with shape (H, W, 3).
-- h: Filter strength for luminance component (default: DENOISE_H = 8).
-- h_color: Filter strength for chrominance components (default: DENOISE_H_COLOR = 8).
-- template_window_size: Size of local patch used for similarity comparison (default: 7).
-- search_window_size: Size of window searched for similar patches (default: 21).
-
-Outputs:
-- Denoised 3-channel BGR uint8 NumPy array with identical dimensions.
+- Validate input image format, channel structure, and data types.
+- Provide a deterministic parameter selector mapping noise metrics to Non-Local Means parameters.
+- Provide adaptive denoising that scales smoothing strength according to measured noise level.
+- Support both 3-channel color (BGR) and single-channel (grayscale) images safely.
+- Preserve fine details and skip/minimize filtering on clean images to prevent texture loss.
+- Preserve backward compatibility for legacy fixed-strength Non-Local Means calls.
 
 Dependencies:
 - cv2 (OpenCV)
 - numpy
+- dataclasses.dataclass
+- backend.src.services.analysis_service.AnalysisService
 - src.config (DENOISE_H, DENOISE_H_COLOR, DENOISE_TEMPLATE_WINDOW, DENOISE_SEARCH_WINDOW)
-
-This module does not:
-- Handle file I/O or web requests.
-- Convert color spaces (it operates directly on BGR).
-- Modify contrast or sharpen edges.
 """
+
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
 
+from backend.src.processing.evaluation.heuristics import (
+    NOISE_HIGH_THRESHOLD,
+    NOISE_LOW_THRESHOLD,
+    estimate_noise_sigma,
+)
 from src.config import (
     DENOISE_H,
     DENOISE_H_COLOR,
@@ -40,54 +39,290 @@ from src.config import (
 )
 
 
-def denoise_image(
-    image: np.ndarray,
-    h: int = DENOISE_H,
-    h_color: int = DENOISE_H_COLOR,
-    template_window_size: int = DENOISE_TEMPLATE_WINDOW,
-    search_window_size: int = DENOISE_SEARCH_WINDOW,
-) -> np.ndarray:
-    """Remove sensor and scan noise while preserving edges via Non-Local Means denoising.
+@dataclass(frozen=True)
+class DenoiseParameters:
+    """Configuration parameters for Non-Local Means denoising."""
 
-    Non-Local Means (Buades et al., 2005) computes pixel estimates as a weighted
-    average of surrounding patches with similar texture and structure, rather than
-    blurring local neighborhoods like a Gaussian or bilateral filter.
+    h: float
+    h_color: float
+    template_window_size: int = DENOISE_TEMPLATE_WINDOW
+    search_window_size: int = DENOISE_SEARCH_WINDOW
+    noise_score: float = 0.0
+    noise_level: str = "medium"
+    skip: bool = False
+
+
+def select_denoising_parameters(
+    noise_score: Optional[float] = None,
+    noise_level: Optional[str] = None,
+) -> DenoiseParameters:
+    """Select optimal Non-Local Means denoising parameters based on noise metrics.
+
+    Thresholds conform to the Phase 5.1 Analysis Engine:
+    - Low noise: sigma < 4.0
+    - Medium noise: 4.0 <= sigma < 10.0
+    - High noise: sigma >= 10.0
+
+    Adaptive Parameter Mapping Strategy:
+    1. Low Noise (sigma < 4.0):
+       - If sigma < 1.5: Pristine image. Skip filtering completely (skip=True, h=0.0)
+         to preserve 100% of fine micro-textures (hair, skin pores, fabric, leaves).
+       - If 1.5 <= sigma < 4.0: Minimal gentle filtering (h=3.0, h_color=3.0) to clean
+         subtle electronic noise without blurring edges.
+    2. Medium Noise (4.0 <= sigma < 10.0):
+       - Standard moderate filtering (h=7.0, h_color=7.0) to smooth film grain while
+         preserving structural boundaries.
+    3. High Noise (sigma >= 10.0):
+       - Strong filtering (h=12.0 to 16.0, h_color=h) to suppress heavy grain or sensor noise.
+
+    Args:
+        noise_score: Estimated noise standard deviation (sigma >= 0.0).
+        noise_level: Qualitative classification ('low', 'medium', 'high').
+
+    Returns:
+        DenoiseParameters instance containing h, h_color, window sizes, and skip flag.
+    """
+    # 1. Parameter selection based on numeric noise score
+    if noise_score is not None:
+        try:
+            score = max(0.0, float(noise_score))
+        except (ValueError, TypeError):
+            score = 0.0
+
+        if score < NOISE_LOW_THRESHOLD:  # < 4.0
+            if score < 1.5:
+                # Pristine clean image: bypass filtering completely to preserve fine detail
+                return DenoiseParameters(
+                    h=0.0,
+                    h_color=0.0,
+                    noise_score=round(score, 2),
+                    noise_level="low",
+                    skip=True,
+                )
+            else:
+                # Very mild noise: gentle smoothing
+                return DenoiseParameters(
+                    h=3.0,
+                    h_color=3.0,
+                    noise_score=round(score, 2),
+                    noise_level="low",
+                    skip=False,
+                )
+        elif score < NOISE_HIGH_THRESHOLD:  # 4.0 <= score < 10.0
+            # Moderate noise: balanced smoothing
+            return DenoiseParameters(
+                h=7.0,
+                h_color=7.0,
+                noise_score=round(score, 2),
+                noise_level="medium",
+                skip=False,
+            )
+        else:  # score >= 10.0
+            # High noise: strong smoothing scaled to noise intensity
+            h_val = float(min(16.0, max(12.0, round(score * 0.9, 1))))
+            return DenoiseParameters(
+                h=h_val,
+                h_color=h_val,
+                noise_score=round(score, 2),
+                noise_level="high",
+                skip=False,
+            )
+
+    # 2. Parameter selection based on qualitative classification string
+    if noise_level is not None:
+        level_str = str(noise_level).strip().lower()
+        if level_str == "low":
+            return DenoiseParameters(
+                h=3.0,
+                h_color=3.0,
+                noise_score=2.0,
+                noise_level="low",
+                skip=False,
+            )
+        elif level_str == "medium":
+            return DenoiseParameters(
+                h=7.0,
+                h_color=7.0,
+                noise_score=6.0,
+                noise_level="medium",
+                skip=False,
+            )
+        elif level_str == "high":
+            return DenoiseParameters(
+                h=12.0,
+                h_color=12.0,
+                noise_score=12.0,
+                noise_level="high",
+                skip=False,
+            )
+
+    # 3. Fallback default (safe medium Non-Local Means configuration)
+    return DenoiseParameters(
+        h=float(DENOISE_H),
+        h_color=float(DENOISE_H_COLOR),
+        noise_score=0.0,
+        noise_level="medium",
+        skip=False,
+    )
+
+
+def adaptive_denoise_image(
+    image: np.ndarray,
+    noise_score: Optional[float] = None,
+    params: Optional[DenoiseParameters] = None,
+) -> Tuple[np.ndarray, DenoiseParameters]:
+    """Denoise an image adaptively based on its measured noise characteristics.
+
+    Preserves fine micro-textures by minimizing or skipping filtering on low-noise images,
+    while applying robust Non-Local Means filtering on high-noise images.
 
     Args:
         image:
-            Input BGR image as a uint8 NumPy array of shape (height, width, 3).
-        h:
-            Filter strength controlling luminance noise removal. Larger values
-            remove more noise but risk softening subtle image textures.
-        h_color:
-            Filter strength controlling chrominance noise removal.
-        template_window_size:
-            Odd integer specifying the template patch size (e.g. 7 for a 7x7 patch).
-        search_window_size:
-            Odd integer specifying the search area window (e.g. 21 for a 21x21 window).
+            Input BGR or grayscale uint8 NumPy array of shape (H, W, 3) or (H, W).
+        noise_score:
+            Optional precomputed noise estimate. If omitted, noise is estimated via AnalysisService.
+        params:
+            Optional preselected DenoiseParameters instance.
 
     Returns:
-        Denoised BGR image as a uint8 NumPy array with the same shape as the input.
+        Tuple of (denoised_image_array, applied_DenoiseParameters).
 
     Raises:
-        ValueError:
-            If input image is None, not a NumPy array, or does not have 3 channels.
+        ValueError: If input is not a valid NumPy array or has unsupported dimensions.
     """
     if not isinstance(image, np.ndarray):
         raise ValueError("Input image must be a valid NumPy array.")
-    if image.ndim != 3 or image.shape[2] != 3:
+
+    if image.dtype != np.uint8:
+        raise ValueError(f"Input image must have dtype uint8, but got {image.dtype}.")
+
+    # Validate channel dimensions
+    is_color = False
+    if image.ndim == 3 and image.shape[2] == 3:
+        is_color = True
+    elif image.ndim == 2 or (image.ndim == 3 and image.shape[2] == 1):
+        is_color = False
+    else:
         raise ValueError(
-            f"Expected a 3-channel color image (H, W, 3), but got shape {image.shape}."
+            f"Expected a 3-channel color image (H, W, 3) or single-channel grayscale (H, W), "
+            f"but got shape {image.shape}."
         )
 
-    # cv2.fastNlMeansDenoisingColored processes luminance and chrominance
-    # components with separate smoothing parameters to preserve edge sharpness.
-    return cv2.fastNlMeansDenoisingColored(
-        image,
-        None,
-        h,
-        h_color,
-        template_window_size,
-        search_window_size,
-    )
+    # 1. Determine parameters
+    if params is None:
+        if noise_score is None:
+            # Reuse blind noise estimation
+            sigma, level = estimate_noise_sigma(image)
+            selected_params = select_denoising_parameters(
+                noise_score=sigma,
+                noise_level=level,
+            )
+        else:
+            selected_params = select_denoising_parameters(noise_score=noise_score)
+    else:
+        selected_params = params
 
+    # 2. Check if denoising should be skipped (e.g. pristine low-noise images)
+    if selected_params.skip or selected_params.h <= 0.0:
+        return image.copy(), selected_params
+
+    # 3. Apply Non-Local Means filtering
+    if is_color:
+        denoised = cv2.fastNlMeansDenoisingColored(
+            image,
+            None,
+            selected_params.h,
+            selected_params.h_color,
+            selected_params.template_window_size,
+            selected_params.search_window_size,
+        )
+    else:
+        # Grayscale single-channel image
+        gray_input = image[:, :, 0] if image.ndim == 3 else image
+        denoised = cv2.fastNlMeansDenoising(
+            gray_input,
+            None,
+            selected_params.h,
+            selected_params.template_window_size,
+            selected_params.search_window_size,
+        )
+        if image.ndim == 3 and image.shape[2] == 1:
+            denoised = denoised[:, :, np.newaxis]
+
+    return denoised, selected_params
+
+
+def denoise_image(
+    image: np.ndarray,
+    h: Optional[int] = None,
+    h_color: Optional[int] = None,
+    template_window_size: int = DENOISE_TEMPLATE_WINDOW,
+    search_window_size: int = DENOISE_SEARCH_WINDOW,
+    adaptive: bool = False,
+) -> np.ndarray:
+    """Remove sensor and scan noise while preserving edges via Non-Local Means denoising.
+
+    Supports both fixed-parameter execution (default for direct calls) and adaptive
+    noise-aware execution.
+
+    Args:
+        image:
+            Input BGR image as a uint8 NumPy array of shape (height, width, 3),
+            or grayscale image of shape (height, width).
+        h:
+            Filter strength controlling luminance noise removal (default: DENOISE_H = 8).
+        h_color:
+            Filter strength controlling chrominance noise removal (default: DENOISE_H_COLOR = 8).
+        template_window_size:
+            Odd integer specifying the template patch size (default: 7).
+        search_window_size:
+            Odd integer specifying the search area window (default: 21).
+        adaptive:
+            If True, automatically estimates image noise and selects optimal parameters.
+
+    Returns:
+        Denoised BGR or grayscale image as a uint8 NumPy array.
+    """
+    if adaptive:
+        result, _ = adaptive_denoise_image(image)
+        return result
+
+    if not isinstance(image, np.ndarray):
+        raise ValueError("Input image must be a valid NumPy array.")
+
+    # Validate channel dimensions
+    is_color = False
+    if image.ndim == 3 and image.shape[2] == 3:
+        is_color = True
+    elif image.ndim == 2 or (image.ndim == 3 and image.shape[2] == 1):
+        is_color = False
+    else:
+        raise ValueError(
+            f"Expected a 3-channel color image (H, W, 3) or single-channel grayscale (H, W), "
+            f"but got shape {image.shape}."
+        )
+
+    h_val = float(h if h is not None else DENOISE_H)
+    h_col_val = float(h_color if h_color is not None else DENOISE_H_COLOR)
+
+    if is_color:
+        return cv2.fastNlMeansDenoisingColored(
+            image,
+            None,
+            h_val,
+            h_col_val,
+            template_window_size,
+            search_window_size,
+        )
+    else:
+        gray_input = image[:, :, 0] if image.ndim == 3 else image
+        denoised = cv2.fastNlMeansDenoising(
+            gray_input,
+            None,
+            h_val,
+            template_window_size,
+            search_window_size,
+        )
+        if image.ndim == 3 and image.shape[2] == 1:
+            return denoised[:, :, np.newaxis]
+        return denoised

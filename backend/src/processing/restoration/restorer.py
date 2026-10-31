@@ -35,7 +35,7 @@ This module does not:
 import numpy as np
 
 from .contrast import enhance_contrast
-from .denoiser import denoise_image
+from .denoiser import adaptive_denoise_image, denoise_image
 from .sharpener import sharpen_image
 
 
@@ -44,11 +44,12 @@ def enhance_image(
     denoise: bool = True,
     contrast: bool = True,
     sharpen: bool = True,
+    adaptive_denoise: bool = True,
 ) -> np.ndarray:
     """Run the classical restoration pipeline on a BGR uint8 image.
 
     The stages execute in strict sequence:
-        1. Denoise (smooths noise while preserving major edges)
+        1. Denoise (smooths noise while preserving major edges, fixed or adaptive)
         2. Contrast (enhances local dynamic range on cleaned signal)
         3. Sharpen (restores micro-edge definition smoothed by denoising)
 
@@ -64,6 +65,9 @@ def enhance_image(
             Whether to apply CLAHE contrast enhancement on the L channel.
         sharpen:
             Whether to apply unity-gain Laplacian sharpening.
+        adaptive_denoise:
+            Whether to adaptively select denoising strength based on image noise.
+            Default is True. If False, uses fixed Non-Local Means parameters.
 
     Returns:
         Restored BGR image as a uint8 NumPy array.
@@ -71,7 +75,10 @@ def enhance_image(
     result = image
 
     if denoise:
-        result = denoise_image(result)
+        if adaptive_denoise:
+            result, _ = adaptive_denoise_image(result)
+        else:
+            result = denoise_image(result)
 
     if contrast:
         result = enhance_contrast(result)

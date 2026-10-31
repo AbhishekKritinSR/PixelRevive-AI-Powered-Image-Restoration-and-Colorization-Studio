@@ -62,6 +62,22 @@ class TestRestorationEndpoints:
         assert json_data["image_base64"].startswith("data:image/png;base64,")
         assert "metrics" in json_data
         assert json_data["options_applied"]["colorize"] is False
+        assert json_data["options_applied"]["adaptive_denoise"] is True
+
+    def test_process_single_image_adaptive_denoise_explicit(self, valid_png_bytes):
+        files = {"file": ("test_photo.png", valid_png_bytes, "image/png")}
+        data = {
+            "denoise": "true",
+            "adaptive_denoise": "false",
+            "contrast": "false",
+            "sharpen": "false",
+            "colorize": "false",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 200
+        json_data = response.json()
+        assert json_data["options_applied"]["denoise"] is True
+        assert json_data["options_applied"]["adaptive_denoise"] is False
 
     def test_process_single_image_with_colorizer_stub(self, valid_png_bytes, monkeypatch):
         # Override model service to use the fast mock colorizer

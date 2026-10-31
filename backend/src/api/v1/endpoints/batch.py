@@ -31,6 +31,10 @@ def process_batch_images(
     contrast: bool = Form(default=True, description="Apply CLAHE contrast enhancement on L channel"),
     sharpen: bool = Form(default=True, description="Apply unity-gain Laplacian sharpening"),
     colorize: bool = Form(default=True, description="Apply AI deep convolutional colorization"),
+    adaptive_denoise: bool = Form(
+        default=True,
+        description="Intelligently adapt denoising strength based on estimated image noise level (when denoise is True)",
+    ),
     batch_service: BatchService = Depends(get_batch_service),
 ) -> BatchRestorationResponse:
     """Process multiple photographs in a batch.
@@ -42,6 +46,7 @@ def process_batch_images(
         contrast=contrast,
         sharpen=sharpen,
         colorize=colorize,
+        adaptive_denoise=adaptive_denoise,
     )
 
     files_data = [(f.filename or f"image_{idx}.png", f.file.read()) for idx, f in enumerate(files)]

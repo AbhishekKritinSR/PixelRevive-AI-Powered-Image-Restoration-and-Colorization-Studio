@@ -127,3 +127,4 @@ class TestAnalysisEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert "image_base64" not in data
+

@@ -44,6 +44,12 @@ from backend.src.core.exceptions import (
     FileTooLargeError,
     UnsupportedFormatError,
 )
+from backend.src.processing.evaluation.heuristics import (
+    NOISE_HIGH_THRESHOLD,
+    NOISE_KERNEL,
+    NOISE_LOW_THRESHOLD,
+    estimate_noise_sigma,
+)
 from backend.src.processing.utils.geometry import resize_if_too_large
 from backend.src.schemas.analysis import (
     AnalysisMetrics,
@@ -143,50 +149,9 @@ class AnalysisService:
         Returns:
             NoiseAnalysis schema containing estimated sigma and qualitative level.
         """
-        if not isinstance(image, np.ndarray):
-            raise ValueError("Input image must be a valid NumPy array.")
-
-        gray = (
-            cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-            if image.ndim == 3 and image.shape[2] == 3
-            else image
-        )
-        h, w = gray.shape[:2]
-
-        # Images smaller than 3x3 cannot be filtered without border distortion
-        if h < 3 or w < 3:
-            return NoiseAnalysis(noise_score=0.0, noise_level="low")
-
-        gray_f = gray.astype(np.float32)
-
-        # 2D spatial convolution
-        conv = cv2.filter2D(gray_f, -1, self._NOISE_KERNEL, borderType=cv2.BORDER_CONSTANT)
-
-        # Slice strictly inner pixels to avoid boundary artifacts
-        inner = conv[1:-1, 1:-1]
-        sum_abs = float(np.sum(np.abs(inner)))
-
-        # Normalization factor: sqrt(pi/2) / (6 * (W - 2) * (H - 2))
-        inner_count = (w - 2) * (h - 2)
-        if inner_count <= 0:
-            return NoiseAnalysis(noise_score=0.0, noise_level="low")
-
-        norm_factor = np.sqrt(np.pi / 2.0) / (6.0 * inner_count)
-        sigma = float(sum_abs * norm_factor)
-
-        if np.isnan(sigma) or np.isinf(sigma):
-            sigma = 0.0
-
-        # Qualitative classification
-        if sigma < self.NOISE_LOW_THRESHOLD:
-            level = "low"
-        elif sigma < self.NOISE_HIGH_THRESHOLD:
-            level = "medium"
-        else:
-            level = "high"
-
+        sigma, level = estimate_noise_sigma(image)
         return NoiseAnalysis(
-            noise_score=round(sigma, 2),
+            noise_score=sigma,
             noise_level=level,
         )
 
@@ -532,3 +497,4 @@ class AnalysisService:
             filename=filename,
             was_resized=was_resized,
         )
+

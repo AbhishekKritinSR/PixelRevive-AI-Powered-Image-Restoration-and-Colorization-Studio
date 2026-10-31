@@ -294,3 +294,4 @@ class TestAnalysisArrayAndImage:
         huge_bytes = b"0" * (26 * 1024 * 1024)
         with pytest.raises(FileTooLargeError, match="exceeds maximum allowed limit"):
             analysis_service.analyze_image(huge_bytes, "huge.jpg")
+

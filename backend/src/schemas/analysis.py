@@ -127,3 +127,4 @@ class ImageAnalysisResponse(BaseModel):
     elapsed_seconds: float = Field(
         description="Total duration spent executing image analysis in seconds"
     )
+

@@ -53,7 +53,7 @@ flowchart TD
 - **Batch Processing**: Concurrently upload up to 10 images with individual progress tracking, individual downloads, and combined ZIP download.
 - **Production Validation**: Strict validation for image format (`.jpg`, `.jpeg`, `.png`, `.webp`), mime-type, 25 MB payload limit, and automatic aspect-preserving downscaling for images exceeding 1600px.
 - **Real-Time Quality Metrics**: Execution latency breakdown (ms), inference device detection (CPU/CUDA), and before/after heuristic contrast and sharpness deltas.
-- **Exhaustive Automated Test Suite**: 84 automated unit and integration tests (53 core image processing tests and 31 FastAPI route/validation tests).
+- **Exhaustive Automated Test Suite**: 140 automated unit, integration, and route validation tests with 100% pass rate.
 
 ---
 
@@ -61,7 +61,7 @@ flowchart TD
 
 1. **Preprocessing**: Validates upload headers and dimensions, normalizes orientations, and resizes images exceeding 1600px on the longest axis while preserving aspect ratio.
 2. **Classical Restoration**:
-   - **Denoising**: `cv2.fastNlMeansDenoisingColored` removes high-frequency scanner/sensor noise while preserving structural edges.
+   - **Adaptive Denoising**: Intelligently measures image noise variance ($\hat{\sigma}$) via an Immerkær Laplacian residual operator; skips/minimizes filtering on clean images to preserve micro-textures ($h=0$ to $3$), and applies adaptive Non-Local Means ($h=7$ to $16$) on noisy inputs.
    - **Contrast Enhancement**: Contrast Limited Adaptive Histogram Equalization (CLAHE) applied specifically to the lightness ($L$) channel in LAB color space, avoiding artificial color saturation.
    - **Sharpening**: Unity-gain Laplacian kernel restores fine micro-contrasts lost during denoising without introducing clipping or brightness drift.
 3. **LAB Color Space Isolation**: Separates lightness ($L \in [0, 100]$) from chromatic channels ($a, b$).

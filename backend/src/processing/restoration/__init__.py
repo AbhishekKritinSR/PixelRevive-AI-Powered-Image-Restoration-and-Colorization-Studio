@@ -8,11 +8,19 @@ Provides independent modules for:
 """
 
 from .contrast import enhance_contrast
-from .denoiser import denoise_image
+from .denoiser import (
+    DenoiseParameters,
+    adaptive_denoise_image,
+    denoise_image,
+    select_denoising_parameters,
+)
 from .restorer import enhance_image
 from .sharpener import sharpen_image
 
 __all__ = [
+    "DenoiseParameters",
+    "select_denoising_parameters",
+    "adaptive_denoise_image",
     "denoise_image",
     "enhance_contrast",
     "sharpen_image",
