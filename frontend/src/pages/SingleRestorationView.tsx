@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Download, Layers, Columns, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Sparkles, Download, Layers, Columns, Image as ImageIcon, Loader2, ShieldAlert } from "lucide-react";
 import { DropZone } from "../components/upload/DropZone";
 import { RestorationControls } from "../components/editor/RestorationControls";
 import { ImageAnalysisPanel } from "../components/analysis/ImageAnalysisPanel";
@@ -13,11 +13,13 @@ import {
   RestorationOptions,
   SingleRestorationResponse,
   ModelRegistryItem,
+  DamageMaskResponse,
 } from "../types/api";
 import {
   restoreSingleImage,
   downloadDataUri,
   fetchModelRegistry,
+  previewDamageMask,
 } from "../services/api";
 
 interface SingleRestorationViewProps {
@@ -49,6 +51,9 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
   const [result, setResult] = useState<SingleRestorationResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"slider" | "split">("slider");
+  const [damageMaskResult, setDamageMaskResult] = useState<DamageMaskResponse | null>(null);
+  const [isPreviewingMask, setIsPreviewingMask] = useState(false);
+  const [maskViewMode, setMaskViewMode] = useState<"overlay" | "mask">("overlay");
 
   useEffect(() => {
     fetchModelRegistry()
@@ -67,6 +72,7 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
     }
     setOriginalUrl(URL.createObjectURL(file));
     setResult(null);
+    setDamageMaskResult(null);
     setErrorMessage(null);
   };
 
@@ -77,7 +83,28 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
     setSelectedFile(null);
     setOriginalUrl(null);
     setResult(null);
+    setDamageMaskResult(null);
     setErrorMessage(null);
+  };
+
+  const handlePreviewDamageMask = async () => {
+    if (!selectedFile) return;
+    setIsPreviewingMask(true);
+    setErrorMessage(null);
+    try {
+      const res = await previewDamageMask(selectedFile);
+      setDamageMaskResult(res);
+      // Automatically ensure scratch repair toggle is enabled for seamless workflow
+      setOptions((prev) => ({ ...prev, repair: true }));
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setErrorMessage(err.message);
+      } else {
+        setErrorMessage("Failed to generate scratch damage mask preview.");
+      }
+    } finally {
+      setIsPreviewingMask(false);
+    }
   };
 
   const handleApplyRecommendations = (recommended: Partial<RestorationOptions>) => {
@@ -143,6 +170,8 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
             disabled={isProcessing}
             isModelReady={isModelReady}
             availableModels={availableModels}
+            onPreviewMask={selectedFile ? handlePreviewDamageMask : undefined}
+            isPreviewingMask={isPreviewingMask}
           />
 
           <Button
@@ -160,6 +189,59 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
 
         {/* Right Column: Comparison, Results, Metrics & Quality Dashboard */}
         <div>
+          {damageMaskResult && (
+            <div className="card" style={{ marginBottom: "1rem", border: "1px solid var(--accent-subtle-border)" }}>
+              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <ShieldAlert size={16} color="var(--accent-primary)" />
+                  <span>Scratch Damage Detection Preview</span>
+                  <span className="badge badge-accent" style={{ fontSize: "0.6875rem" }}>
+                    {damageMaskResult.detected_components} defect(s) ({damageMaskResult.coverage_percentage}% area)
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className={`btn ${maskViewMode === "overlay" ? "btn-secondary" : "btn-outline"}`}
+                    style={{ padding: "0.2rem 0.5rem", fontSize: "0.6875rem" }}
+                    onClick={() => setMaskViewMode("overlay")}
+                  >
+                    Overlay
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn ${maskViewMode === "mask" ? "btn-secondary" : "btn-outline"}`}
+                    style={{ padding: "0.2rem 0.5rem", fontSize: "0.6875rem" }}
+                    onClick={() => setMaskViewMode("mask")}
+                  >
+                    Binary Mask
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ padding: "0.2rem 0.5rem", fontSize: "0.6875rem" }}
+                    onClick={() => setDamageMaskResult(null)}
+                    title="Dismiss damage preview"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "0.75rem", background: "var(--bg-subtle)", borderRadius: "var(--radius-sm)" }}>
+                <img
+                  src={maskViewMode === "overlay" ? damageMaskResult.overlay_base64 : damageMaskResult.mask_base64}
+                  alt="Detected Scratch Damage"
+                  style={{ maxHeight: "300px", maxWidth: "100%", objectFit: "contain", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-subtle)" }}
+                />
+                <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)", marginTop: "0.5rem" }}>
+                  {maskViewMode === "overlay"
+                    ? "Red highlights indicate detected linear scratches & surface abrasions with biological landmark protection."
+                    : "Binary morphological mask used to target LaMa neural Fast Fourier Convolution or Telea inpainting."}
+                </div>
+              </div>
+            </div>
+          )}
+
           {isProcessing ? (
             <div
               className="card"

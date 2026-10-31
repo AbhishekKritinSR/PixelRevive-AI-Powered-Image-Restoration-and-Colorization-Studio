@@ -16,7 +16,7 @@ Dependencies:
 """
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -98,6 +98,7 @@ def _filter_directional_components(
     min_aspect_ratio: float = DEFAULT_MIN_ASPECT_RATIO,
     max_thickness: int = DEFAULT_MAX_THICKNESS,
     max_pixels: int = 5000,
+    protected_zones: Optional[List[Tuple[int, int, int, int]]] = None,
 ) -> Tuple[np.ndarray, int]:
     """Filter candidate binary pixels into geometrically valid scratch components."""
     if np.count_nonzero(cand_mask) == 0:
@@ -111,9 +112,28 @@ def _filter_directional_components(
         area = stats[i, cv2.CC_STAT_AREA]
         comp_w = stats[i, cv2.CC_STAT_WIDTH]
         comp_h = stats[i, cv2.CC_STAT_HEIGHT]
+        comp_left = stats[i, cv2.CC_STAT_LEFT]
+        comp_top = stats[i, cv2.CC_STAT_TOP]
 
         if area < min_length or area > max_pixels:
             continue
+
+        # Biological landmark protection: suppress false positives in eyes/mouth
+        if protected_zones:
+            cx = int(comp_left + comp_w / 2)
+            cy = int(comp_top + comp_h / 2)
+            is_in_protected = False
+            for (zx1, zy1, zx2, zy2) in protected_zones:
+                if zx1 <= cx <= zx2 and zy1 <= cy <= zy2:
+                    is_in_protected = True
+                    break
+            if is_in_protected:
+                # Unless candidate is an extreme defect (contrast > 45), protect landmark
+                comp_pix = gray_image[labels == i]
+                if len(comp_pix) > 0:
+                    c_med = float(np.median(comp_pix))
+                    if abs(c_med - 128.0) < 45.0:
+                        continue
 
         comp_mask = (labels == i).astype(np.uint8)
         contours, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -209,12 +229,39 @@ def detect_scratch_mask(
     total_pixels = h * w
     max_comp_pixels = int(total_pixels * max_coverage)
 
-    # 2. Build directional structuring elements
+    # 1b. Identify facial sensitive zones (eyes/mouth) to prevent false scratch classification
+    protected_zones: List[Tuple[int, int, int, int]] = []
+    if image.ndim == 3:
+        try:
+            from .face_restorer import FaceRestorer
+            faces = FaceRestorer.detect_faces(image)
+            for (fx, fy, fw, fh) in faces:
+                protected_zones.append((
+                    fx + int(fw * 0.10),
+                    fy + int(fh * 0.18),
+                    fx + int(fw * 0.90),
+                    fy + int(fh * 0.52),
+                ))
+                protected_zones.append((
+                    fx + int(fw * 0.20),
+                    fy + int(fh * 0.65),
+                    fx + int(fw * 0.80),
+                    fy + int(fh * 0.88),
+                ))
+        except Exception:
+            pass
+
+    # 2. Build directional structuring elements (multi-scale primary + fine)
     k_len = max(kernel_length, 3)
     k_h = np.ones((1, k_len), dtype=np.uint8)
     k_v = np.ones((k_len, 1), dtype=np.uint8)
     k_45 = np.eye(k_len, dtype=np.uint8)[::-1].copy()
     k_135 = np.eye(k_len, dtype=np.uint8).copy()
+
+    # Fine-scale kernel for narrow hairline scratches
+    k_fine = max(k_len - 4, 5)
+    k_hf = np.ones((1, k_fine), dtype=np.uint8)
+    k_vf = np.ones((k_fine, 1), dtype=np.uint8)
 
     # 3. Morphological operations
     # Black-hat (dark defects against lighter background)
@@ -230,8 +277,6 @@ def detect_scratch_mask(
     th_135 = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k_135)
 
     # 4. Orthogonal directional subtraction
-    # A vertical defect shows strong response under horizontal bridging (k_h) but not k_v.
-    # An orthogonal subtraction isolates unidirectional scratches from isotropic textures.
     diff_dark_v = cv2.subtract(bh_h, bh_v)
     diff_dark_h = cv2.subtract(bh_v, bh_h)
     diff_dark_45 = cv2.subtract(bh_135, bh_45)
@@ -253,19 +298,18 @@ def detect_scratch_mask(
     _, m_b45 = cv2.threshold(diff_bright_45, threshold, 255, cv2.THRESH_BINARY)
     _, m_b135 = cv2.threshold(diff_bright_135, threshold, 255, cv2.THRESH_BINARY)
 
-    # 5. Connected-component geometric filtering performed per-direction
-    # Isolating directions before union prevents intersecting scratches from forming false blobs
+    # 5. Connected-component geometric filtering performed per-direction with landmark protection
     mask_v, c_v = _filter_directional_components(
-        cv2.bitwise_or(m_dv, m_bv), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels
+        cv2.bitwise_or(m_dv, m_bv), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
     )
     mask_h, c_h = _filter_directional_components(
-        cv2.bitwise_or(m_dh, m_bh), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels
+        cv2.bitwise_or(m_dh, m_bh), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
     )
     mask_45, c_45 = _filter_directional_components(
-        cv2.bitwise_or(m_d45, m_b45), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels
+        cv2.bitwise_or(m_d45, m_b45), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
     )
     mask_135, c_135 = _filter_directional_components(
-        cv2.bitwise_or(m_d135, m_b135), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels
+        cv2.bitwise_or(m_d135, m_b135), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
     )
 
     combined_mask = cv2.bitwise_or(mask_v, mask_h)
@@ -308,13 +352,44 @@ def detect_scratch_mask(
     )
 
 
+def generate_mask_overlay(
+    image: np.ndarray,
+    mask: np.ndarray,
+    color: Tuple[int, int, int] = (0, 0, 255),
+    alpha: float = 0.55,
+) -> np.ndarray:
+    """Generate visual overlay of detected scratch mask on input photograph.
+
+    Args:
+        image: Original input image (BGR or grayscale uint8).
+        mask: Binary damage mask (uint8, HxW).
+        color: Overlay highlight color in BGR (default red: (0, 0, 255)).
+        alpha: Blend opacity between 0.0 (transparent) and 1.0 (opaque).
+
+    Returns:
+        BGR uint8 image with semi-transparent damage highlighting.
+    """
+    if image.ndim == 2:
+        base = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    else:
+        base = image.copy()
+
+    if mask is None or np.count_nonzero(mask) == 0:
+        return base
+
+    overlay = base.copy()
+    overlay[mask > 0] = color
+
+    return cv2.addWeighted(overlay, alpha, base, 1.0 - alpha, 0)
+
+
 def repair_scratches(
     image: np.ndarray,
     mask: Optional[np.ndarray] = None,
     inpaint_radius: int = DEFAULT_INPAINT_RADIUS,
     method: str = DEFAULT_INPAINT_METHOD,
 ) -> Tuple[np.ndarray, ScratchRepairMetadata]:
-    """Reconstruct scratch-damaged pixels using OpenCV inpainting.
+    """Reconstruct scratch-damaged pixels using hybrid inpainting.
 
     Args:
         image:
@@ -324,7 +399,7 @@ def repair_scratches(
         inpaint_radius:
             Inpainting neighborhood radius in pixels (typically 2-5, default 3).
         method:
-            Inpainting algorithm: 'telea' (Fast Marching Method) or 'ns' (Navier-Stokes).
+            Inpainting algorithm: 'lama', 'telea', 'ns', or 'hybrid' / 'auto'.
 
     Returns:
         Tuple of (reconstructed uint8 image NumPy array, ScratchRepairMetadata).
@@ -345,10 +420,8 @@ def repair_scratches(
         raise ValueError("Image dimensions must be at least 2x2")
 
     method_clean = method.lower().strip()
-    if method_clean not in ("telea", "ns", "lama"):
-        raise ValueError(f"Unsupported inpainting method '{method}'. Choose 'lama', 'telea', or 'ns'.")
-
-    flags = cv2.INPAINT_TELEA if method_clean == "telea" else cv2.INPAINT_NS
+    if method_clean not in ("telea", "ns", "lama", "hybrid", "auto"):
+        raise ValueError(f"Unsupported inpainting method '{method}'. Choose 'lama', 'telea', 'ns', or 'hybrid'.")
 
     if inpaint_radius < 1:
         raise ValueError(f"Inpaint radius must be >= 1, got {inpaint_radius}")
@@ -396,7 +469,16 @@ def repair_scratches(
             skip_reason=None,
         )
 
-    meta.method = method_clean
+    # In hybrid/auto mode: determine whether to deploy fast Telea or deep LaMa
+    if method_clean in ("hybrid", "auto"):
+        if meta.repaired_pixels < 350 and meta.detected_components <= 3:
+            chosen_engine = "telea"
+        else:
+            chosen_engine = "lama"
+    else:
+        chosen_engine = method_clean
+
+    meta.method = chosen_engine
     meta.radius = inpaint_radius
 
     # If mask is empty or repair was skipped: return unchanged copy (zero overhead)
@@ -404,8 +486,8 @@ def repair_scratches(
         meta.applied = False
         return image.copy(), meta
 
-    # Execute inpainting
-    if method_clean == "lama":
+    # Execute deep inpainting if LaMa selected
+    if chosen_engine == "lama":
         try:
             from .inpainter_lama import LaMaInpainter
             lama = LaMaInpainter.get_instance()
@@ -419,7 +501,10 @@ def repair_scratches(
             pass  # Graceful fallback to Telea below
 
     # Execute classical OpenCV inpainting (Telea or Navier-Stokes)
+    flags = cv2.INPAINT_TELEA if chosen_engine in ("telea", "hybrid", "auto") else cv2.INPAINT_NS
     repaired_image = cv2.inpaint(image, repair_mask, inpaintRadius=inpaint_radius, flags=flags)
     meta.applied = True
+    if chosen_engine == "lama":
+        meta.method = "telea (fallback)"
 
     return repaired_image, meta

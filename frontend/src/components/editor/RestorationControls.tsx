@@ -8,6 +8,7 @@ import {
   Wand2,
   Maximize2,
   ScanFace,
+  Eye,
 } from "lucide-react";
 import { RestorationOptions, ModelRegistryItem } from "../../types/api";
 
@@ -17,6 +18,8 @@ interface RestorationControlsProps {
   disabled?: boolean;
   isModelReady?: boolean;
   availableModels?: ModelRegistryItem[];
+  onPreviewMask?: () => void;
+  isPreviewingMask?: boolean;
 }
 
 export const RestorationControls: React.FC<RestorationControlsProps> = ({
@@ -25,6 +28,8 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
   disabled = false,
   isModelReady = true,
   availableModels = [],
+  onPreviewMask,
+  isPreviewingMask = false,
 }) => {
   const toggleOption = (key: keyof RestorationOptions) => {
     if (disabled) return;
@@ -194,6 +199,34 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
                 ? "Deep neural inpainting with global receptive field; cleanly eliminates wide diagonal scratches without edge blur."
                 : "Classical partial differential equation inpainting; optimal for fine hairline scratches."}
             </div>
+
+            {onPreviewMask && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.375rem",
+                  marginTop: "0.35rem",
+                  padding: "0.35rem 0.6rem",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  borderColor: "var(--border-subtle)",
+                  color: "var(--text-primary)",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPreviewMask();
+                }}
+                disabled={disabled || isPreviewingMask}
+                aria-label="Preview Damage Mask"
+              >
+                <Eye size={13} color="var(--accent-primary)" />
+                <span>{isPreviewingMask ? "Detecting Scratches..." : "Preview Damage Mask & Overlay"}</span>
+              </button>
+            )}
           </div>
         )}
 

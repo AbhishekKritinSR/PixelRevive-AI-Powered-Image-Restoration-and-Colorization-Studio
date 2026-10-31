@@ -32,7 +32,7 @@ This service does NOT:
 import io
 from pathlib import Path
 import time
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -50,6 +50,8 @@ from backend.src.processing.evaluation.heuristics import (
     NOISE_LOW_THRESHOLD,
     estimate_noise_sigma,
 )
+from backend.src.processing.restoration.face_restorer import FaceRestorer
+from backend.src.processing.restoration.scratch_repair import detect_scratch_mask
 from backend.src.processing.utils.geometry import resize_if_too_large
 from backend.src.schemas.analysis import (
     AnalysisMetrics,
@@ -287,6 +289,7 @@ class AnalysisService:
         sharpness: SharpnessAnalysis,
         contrast: ContrastAnalysis,
         monochrome: MonochromeAnalysis,
+        image_rgb: Optional[np.ndarray] = None,
     ) -> Tuple[RestorationRecommendations, List[str]]:
         """Generate explainable, rule-based restoration toggles and detected issue tags.
 
@@ -295,6 +298,7 @@ class AnalysisService:
             sharpness: Computed SharpnessAnalysis.
             contrast: Computed ContrastAnalysis.
             monochrome: Computed MonochromeAnalysis.
+            image_rgb: Optional RGB uint8 array for content-aware detection (scratches, faces, resolution).
 
         Returns:
             Tuple of (RestorationRecommendations, List[str] of detected issues).
@@ -414,14 +418,128 @@ class AnalysisService:
                 evidence="image_has_color",
             )
 
+        # 5. Scratch repair recommendation
+        repair_item = None
+        face_restore_item = None
+        upscale_item = None
+
+        has_scratches = False
+        has_faces = False
+        is_low_res = False
+
+        if image_rgb is not None:
+            h, w = image_rgb.shape[:2]
+            bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+
+            # Check for scratches/creases
+            try:
+                _, scratch_meta = detect_scratch_mask(bgr, threshold=25, min_length=10)
+                if scratch_meta.detected_components >= 2 or scratch_meta.coverage_percentage >= 0.04:
+                    has_scratches = True
+                    detected_issues.append(f"Physical Surface Scratches ({scratch_meta.detected_components} defect(s))")
+                    repair_item = RecommendationItem(
+                        recommended=True,
+                        reason=(
+                            f"Detected physical surface damage ({scratch_meta.detected_components} scratch component(s), "
+                            f"{scratch_meta.coverage_percentage:.2f}% coverage). Hybrid inpainting is recommended."
+                        ),
+                        evidence="scratches_detected",
+                    )
+                else:
+                    repair_item = RecommendationItem(
+                        recommended=False,
+                        reason="Minimal or no physical surface scratches detected.",
+                        evidence="no_scratches_detected",
+                    )
+            except Exception:
+                repair_item = RecommendationItem(
+                    recommended=False,
+                    reason="Scratch detection could not run on this image.",
+                    evidence="scratch_check_skipped",
+                )
+
+            # Check for facial regions
+            try:
+                faces = FaceRestorer.detect_faces(bgr)
+                if len(faces) > 0:
+                    has_faces = True
+                    detected_issues.append(f"Historical Portrait Features ({len(faces)} face(s))")
+                    face_restore_item = RecommendationItem(
+                        recommended=True,
+                        reason=(
+                            f"Detected {len(faces)} portrait face(s). Localized identity-preserving facial "
+                            "restoration is recommended to clarify facial expression and eyes without plastic deformation."
+                        ),
+                        evidence="face_detected",
+                    )
+                else:
+                    face_restore_item = RecommendationItem(
+                        recommended=False,
+                        reason="No prominent portrait facial regions detected.",
+                        evidence="no_faces_detected",
+                    )
+            except Exception:
+                face_restore_item = RecommendationItem(
+                    recommended=False,
+                    reason="Facial detection could not run on this image.",
+                    evidence="face_check_skipped",
+                )
+
+            # Check resolution
+            if w < 800 or h < 800:
+                is_low_res = True
+                detected_issues.append(f"Low Resolution Input ({w}x{h})")
+                upscale_item = RecommendationItem(
+                    recommended=True,
+                    reason=(
+                        f"Image resolution ({w}x{h}) is relatively low. AI super-resolution (Real-ESRGAN or FSRCNN) "
+                        "is recommended to reconstruct fine photographic textures and crisp edge transitions."
+                    ),
+                    evidence="low_resolution",
+                )
+            else:
+                upscale_item = RecommendationItem(
+                    recommended=False,
+                    reason=f"Image resolution ({w}x{h}) is sufficient. Super-resolution is optional.",
+                    evidence="adequate_resolution",
+                )
+
         recommendations = RestorationRecommendations(
             denoise=denoise_item,
             contrast=contrast_item,
             sharpen=sharpen_item,
             colorize=colorize_item,
+            repair=repair_item,
+            face_restore=face_restore_item,
+            upscale=upscale_item,
         )
 
         return recommendations, detected_issues
+
+    def classify_degradation(
+        self,
+        noise: NoiseAnalysis,
+        sharpness: SharpnessAnalysis,
+        contrast: ContrastAnalysis,
+        monochrome: MonochromeAnalysis,
+        has_scratches: bool = False,
+        has_faces: bool = False,
+        is_low_res: bool = False,
+    ) -> str:
+        """Classify dominant photographic degradation archetype for explainable UI feedback."""
+        if monochrome.is_monochrome and has_scratches:
+            return "scratched_historical"
+        if monochrome.is_monochrome and contrast.contrast_level == "low":
+            return "faded_monochrome"
+        if noise.noise_level == "high" and is_low_res:
+            return "noisy_low_resolution"
+        if has_faces and (sharpness.sharpness_level == "blurry" or contrast.contrast_level == "low"):
+            return "degraded_portrait"
+        if monochrome.is_monochrome:
+            return "monochrome_historical"
+        if noise.noise_level == "low" and sharpness.sharpness_level == "sharp" and contrast.contrast_level != "low":
+            return "clean_photograph"
+        return "general_photograph"
 
     def analyze_array(
         self,
@@ -449,7 +567,21 @@ class AnalysisService:
         monochrome = self.estimate_monochrome(image_rgb)
 
         recommendations, issues = self.generate_recommendations(
-            noise, sharpness, contrast, monochrome
+            noise, sharpness, contrast, monochrome, image_rgb=image_rgb
+        )
+
+        has_scratches = recommendations.repair.recommended if recommendations.repair else False
+        has_faces = recommendations.face_restore.recommended if recommendations.face_restore else False
+        is_low_res = recommendations.upscale.recommended if recommendations.upscale else False
+
+        degradation_category = self.classify_degradation(
+            noise=noise,
+            sharpness=sharpness,
+            contrast=contrast,
+            monochrome=monochrome,
+            has_scratches=has_scratches,
+            has_faces=has_faces,
+            is_low_res=is_low_res,
         )
 
         elapsed = time.perf_counter() - start_time
@@ -471,6 +603,7 @@ class AnalysisService:
             ),
             detected_issues=issues,
             recommended_options=recommendations,
+            degradation_category=degradation_category,
             elapsed_seconds=round(elapsed, 4),
         )
 

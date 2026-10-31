@@ -12,6 +12,7 @@ import {
   BatchRestorationResponse,
   ImageAnalysisResponse,
   ImageQualityAssessmentResponse,
+  DamageMaskResponse,
 } from "../types/api";
 
 const API_BASE_URL =
@@ -105,6 +106,31 @@ export async function analyzeImage(file: File): Promise<ImageAnalysisResponse> {
   }
 
   return (await response.json()) as ImageAnalysisResponse;
+}
+
+/**
+ * Preview detected scratch damage mask and visual overlay without inpainting.
+ */
+export async function previewDamageMask(
+  file: File,
+  threshold: number = 25,
+  minLength: number = 10
+): Promise<DamageMaskResponse> {
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+  formData.append("threshold", String(threshold));
+  formData.append("min_length", String(minLength));
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/restoration/mask`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseErrorResponse(response));
+  }
+
+  return (await response.json()) as DamageMaskResponse;
 }
 
 /**

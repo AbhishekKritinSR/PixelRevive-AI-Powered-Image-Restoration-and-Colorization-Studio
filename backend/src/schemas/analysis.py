@@ -9,7 +9,7 @@ Responsibilities:
 - Provide full schema validation and serialization for POST /api/v1/restoration/analyze.
 """
 
-from typing import List, Literal
+from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
 
@@ -94,12 +94,24 @@ class RecommendationItem(BaseModel):
 
 
 class RestorationRecommendations(BaseModel):
-    """Schema grouping recommendations for all four primary restoration pipeline stages."""
+    """Schema grouping recommendations for all restoration pipeline stages."""
 
     denoise: RecommendationItem = Field(description="Recommendation for Non-Local Means denoising")
     contrast: RecommendationItem = Field(description="Recommendation for CLAHE contrast enhancement")
     sharpen: RecommendationItem = Field(description="Recommendation for unity-gain Laplacian sharpening")
     colorize: RecommendationItem = Field(description="Recommendation for AI deep colorization")
+    repair: Optional[RecommendationItem] = Field(
+        default=None,
+        description="Recommendation for scratch detection and inpainting",
+    )
+    face_restore: Optional[RecommendationItem] = Field(
+        default=None,
+        description="Recommendation for localized identity-preserving face enhancement",
+    )
+    upscale: Optional[RecommendationItem] = Field(
+        default=None,
+        description="Recommendation for AI super-resolution upscaling (2x or 4x)",
+    )
 
 
 class AnalysisMetrics(BaseModel):
@@ -123,6 +135,10 @@ class ImageAnalysisResponse(BaseModel):
     )
     recommended_options: RestorationRecommendations = Field(
         description="Rule-based restoration recommendations for each pipeline stage"
+    )
+    degradation_category: Optional[str] = Field(
+        default="general_photograph",
+        description="Holistic degradation classification (e.g. 'scratched_historical', 'faded_monochrome', 'degraded_portrait', 'clean_photograph')",
     )
     elapsed_seconds: float = Field(
         description="Total duration spent executing image analysis in seconds"

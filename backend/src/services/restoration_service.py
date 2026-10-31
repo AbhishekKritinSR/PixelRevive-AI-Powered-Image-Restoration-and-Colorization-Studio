@@ -55,11 +55,16 @@ from backend.src.processing.evaluation.heuristics import (
     estimate_sharpness,
 )
 from backend.src.processing.restoration.restorer import enhance_image
+from backend.src.processing.restoration.scratch_repair import (
+    detect_scratch_mask,
+    generate_mask_overlay,
+)
 from backend.src.processing.restoration.super_resolution import upscale_image
 from backend.src.processing.utils.format_converter import image_to_base64_png
 from backend.src.processing.utils.geometry import resize_if_too_large
 from backend.src.schemas.metrics import QualityMetricsResponse
 from backend.src.schemas.restoration import (
+    DamageMaskResponse,
     RestorationOptions,
     SingleRestorationResponse,
 )
@@ -274,4 +279,43 @@ class RestorationService:
         )
 
         return response, png_bytes
+
+    def generate_damage_mask_preview(
+        self,
+        file_bytes: bytes,
+        filename: str = "upload.png",
+        threshold: int = 25,
+        min_length: int = 10,
+    ) -> DamageMaskResponse:
+        """Inspect and preview detected scratch damage masks and overlays before repair."""
+        self.validate_file_metadata(filename, len(file_bytes))
+        image_rgb = self.decode_image_bytes(file_bytes)
+        processed_input_rgb, _ = resize_if_too_large(
+            image_rgb, max_dimension=settings.MAX_IMAGE_DIMENSION
+        )
+
+        start_time = time.perf_counter()
+        bgr = cv2.cvtColor(processed_input_rgb, cv2.COLOR_RGB2BGR)
+
+        mask, meta = detect_scratch_mask(bgr, threshold=threshold, min_length=min_length)
+        overlay_bgr = generate_mask_overlay(bgr, mask)
+        overlay_rgb = cv2.cvtColor(overlay_bgr, cv2.COLOR_BGR2RGB)
+
+        mask_3ch = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB)
+        mask_base64 = image_to_base64_png(mask_3ch)
+        overlay_base64 = image_to_base64_png(overlay_rgb)
+
+        elapsed = time.perf_counter() - start_time
+
+        return DamageMaskResponse(
+            status="success",
+            filename=filename,
+            detected_components=meta.detected_components,
+            repaired_pixels=meta.repaired_pixels,
+            coverage_percentage=meta.coverage_percentage,
+            mask_base64=mask_base64,
+            overlay_base64=overlay_base64,
+            elapsed_seconds=round(elapsed, 3),
+        )
+
 

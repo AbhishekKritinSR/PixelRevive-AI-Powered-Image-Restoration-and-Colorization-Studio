@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from backend.src.api.dependencies import get_restoration_service
 from backend.src.schemas.restoration import (
+    DamageMaskResponse,
     RestorationOptions,
     SingleRestorationResponse,
 )
@@ -109,4 +110,29 @@ def process_single_image(
     )
 
     return response
+
+
+@router.post(
+    "/restoration/mask",
+    response_model=DamageMaskResponse,
+    summary="Preview Scratch Damage Mask and Visual Overlay",
+    description="Analyze uploaded photo for physical scratches, cracks, and surface blemishes, returning the detection mask and visual overlay without inpainting.",
+)
+def preview_damage_mask(
+    file: UploadFile = File(..., description="Photographic image file (JPG, PNG, WEBP)"),
+    threshold: int = Form(default=25, description="Intensity residual threshold for scratch detection"),
+    min_length: int = Form(default=10, description="Minimum pixel length for elongated scratch components"),
+    restoration_service: RestorationService = Depends(get_restoration_service),
+) -> DamageMaskResponse:
+    """Analyze and preview detected scratch damage masks and overlays before repair."""
+    file_bytes = file.file.read()
+    filename = file.filename or "upload.png"
+
+    return restoration_service.generate_damage_mask_preview(
+        file_bytes=file_bytes,
+        filename=filename,
+        threshold=threshold,
+        min_length=min_length,
+    )
+
 

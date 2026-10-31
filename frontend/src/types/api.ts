@@ -155,6 +155,9 @@ export interface RestorationRecommendations {
   contrast: RecommendationItem;
   sharpen: RecommendationItem;
   colorize: RecommendationItem;
+  repair?: RecommendationItem;
+  face_restore?: RecommendationItem;
+  upscale?: RecommendationItem;
 }
 
 export interface AnalysisMetrics {
@@ -171,6 +174,18 @@ export interface ImageAnalysisResponse {
   analysis: AnalysisMetrics;
   detected_issues: string[];
   recommended_options: RestorationRecommendations;
+  degradation_category?: string;
+  elapsed_seconds: number;
+}
+
+export interface DamageMaskResponse {
+  status: string;
+  filename: string;
+  detected_components: number;
+  repaired_pixels: number;
+  coverage_percentage: number;
+  mask_base64: string;
+  overlay_base64: string;
   elapsed_seconds: number;
 }
 

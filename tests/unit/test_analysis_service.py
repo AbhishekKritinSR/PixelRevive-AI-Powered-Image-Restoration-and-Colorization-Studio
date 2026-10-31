@@ -295,3 +295,44 @@ class TestAnalysisArrayAndImage:
         with pytest.raises(FileTooLargeError, match="exceeds maximum allowed limit"):
             analysis_service.analyze_image(huge_bytes, "huge.jpg")
 
+    def test_analysis_scratched_image_recommends_repair(
+        self, analysis_service: AnalysisService
+    ):
+        img = np.full((120, 160, 3), 180, dtype=np.uint8)
+        # Draw severe thin scratches
+        cv2.line(img, (20, 10), (20, 110), (10, 10, 10), thickness=1)
+        cv2.line(img, (50, 15), (50, 105), (15, 15, 15), thickness=1)
+        cv2.line(img, (90, 15), (90, 105), (15, 15, 15), thickness=1)
+        res = analysis_service.analyze_array(img, filename="scratched.png")
+        assert res.recommended_options.repair is not None
+        assert res.recommended_options.repair.recommended is True
+        assert "scratches_detected" in res.recommended_options.repair.evidence
+
+    def test_analysis_low_res_recommends_upscale(
+        self, analysis_service: AnalysisService
+    ):
+        img = np.full((100, 120, 3), 128, dtype=np.uint8)
+        res = analysis_service.analyze_array(img, filename="small.png")
+        assert res.recommended_options.upscale is not None
+        assert res.recommended_options.upscale.recommended is True
+        assert res.degradation_category in ["noisy_low_resolution", "monochrome_historical", "general_photograph", "faded_monochrome"]
+
+    def test_classify_degradation_archetypes(
+        self, analysis_service: AnalysisService
+    ):
+        noise = NoiseAnalysis(noise_score=1.0, noise_level="low")
+        sharpness = SharpnessAnalysis(sharpness_score=600.0, sharpness_level="sharp")
+        contrast = ContrastAnalysis(contrast_score=70.0, dynamic_range=200.0, contrast_level="high")
+        mono_true = MonochromeAnalysis(is_monochrome=True, color_variation_score=0.2, confidence=0.99)
+        mono_false = MonochromeAnalysis(is_monochrome=False, color_variation_score=30.0, confidence=0.99)
+
+        cat1 = analysis_service.classify_degradation(
+            noise, sharpness, contrast, mono_true, has_scratches=True
+        )
+        assert cat1 == "scratched_historical"
+
+        cat2 = analysis_service.classify_degradation(
+            noise, sharpness, contrast, mono_false
+        )
+        assert cat2 == "clean_photograph"
+

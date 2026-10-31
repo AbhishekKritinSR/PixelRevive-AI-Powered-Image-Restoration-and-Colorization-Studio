@@ -286,4 +286,20 @@ class TestRestorationEndpoints:
         assert opts["color_saturation"] == 0.90
         assert opts["color_temperature"] == 0.20
 
+    def test_preview_damage_mask_route(self, valid_png_bytes):
+        files = {"file": ("scratched_photo.png", valid_png_bytes, "image/png")}
+        data = {"threshold": "20", "min_length": "8"}
+        response = client.post("/api/v1/restoration/mask", files=files, data=data)
+        assert response.status_code == 200
+        json_data = response.json()
+        assert json_data["status"] == "success"
+        assert json_data["filename"] == "scratched_photo.png"
+        assert "mask_base64" in json_data
+        assert "overlay_base64" in json_data
+        assert json_data["mask_base64"].startswith("data:image/png;base64,")
+        assert json_data["overlay_base64"].startswith("data:image/png;base64,")
+        assert "detected_components" in json_data
+        assert "coverage_percentage" in json_data
+
+
 
