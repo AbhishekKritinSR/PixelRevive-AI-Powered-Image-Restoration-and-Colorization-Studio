@@ -47,3 +47,4 @@ class TestFaceRestorer:
         assert restored.shape == img.shape
         assert restored.dtype == np.uint8
         assert np.all(np.isfinite(restored))
+

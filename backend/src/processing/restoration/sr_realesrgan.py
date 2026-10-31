@@ -137,3 +137,4 @@ class RealESRGANUpscaler:
             upscaled_bgr = cv2.resize(upscaled_bgr, (w * 2, h * 2), interpolation=cv2.INTER_LANCZOS4)
 
         return upscaled_bgr, True
+

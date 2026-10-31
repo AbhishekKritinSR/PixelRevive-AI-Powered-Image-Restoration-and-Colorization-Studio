@@ -53,3 +53,4 @@ class TestColorizationRefinements:
         assert not np.array_equal(warm, cool)
         # Cool should have higher blue ratio than warm
         assert np.mean(cool[:, :, 0]) > np.mean(warm[:, :, 0])
+

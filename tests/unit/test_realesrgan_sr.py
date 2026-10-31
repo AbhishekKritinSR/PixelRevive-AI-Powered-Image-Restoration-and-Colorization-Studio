@@ -60,3 +60,4 @@ class TestRealESRGAN:
         assert meta.scale == 4
         assert meta.model_name in ("realesrgan_x4", "fsrcnn_x4")
         assert upscaled.shape == (120, 120, 3)
+

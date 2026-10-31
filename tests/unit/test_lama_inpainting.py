@@ -88,3 +88,4 @@ class TestLaMaInpainting:
         assert meta.applied is True
         assert meta.repaired_pixels > 0
         assert meta.method in ("lama", "telea")
+
