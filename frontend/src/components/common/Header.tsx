@@ -20,11 +20,11 @@ export const Header: React.FC<HeaderProps> = ({
   const isOnline = health?.status === "healthy";
 
   return (
-    <header className="header">
+    <header className="header" role="banner">
       <div className="header-content">
         <div className="logo-area">
-          <div className="logo-badge">
-            <Sparkles size={20} />
+          <div className="logo-badge" aria-hidden="true">
+            <Sparkles size={16} />
           </div>
           <div>
             <div className="logo-title">PixelRevive</div>
@@ -32,35 +32,46 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        <nav className="nav-tabs">
+        <nav className="nav-tabs" aria-label="Main Navigation">
           <button
+            type="button"
             className={`nav-tab ${activeTab === "single" ? "active" : ""}`}
             onClick={() => onTabChange("single")}
+            aria-selected={activeTab === "single"}
+            role="tab"
           >
-            <Layers size={16} />
+            <Layers size={15} />
             <span>Restoration</span>
           </button>
           <button
+            type="button"
             className={`nav-tab ${activeTab === "batch" ? "active" : ""}`}
             onClick={() => onTabChange("batch")}
+            aria-selected={activeTab === "batch"}
+            role="tab"
           >
-            <Images size={16} />
+            <Images size={15} />
             <span>Batch Queue</span>
           </button>
-          <button className="nav-tab" onClick={onOpenAbout}>
-            <Info size={16} />
+          <button
+            type="button"
+            className="nav-tab"
+            onClick={onOpenAbout}
+            title="About PixelRevive"
+          >
+            <Info size={15} />
             <span>About</span>
           </button>
         </nav>
 
         <div className="header-status">
           {isHealthLoading ? (
-            <div className="status-pill">
-              <span className="status-dot spinner" />
+            <div className="status-pill" title="Checking backend health...">
+              <span className="status-dot spinner" style={{ border: "1px solid var(--text-secondary)", borderTopColor: "transparent" }} />
               <span>Connecting...</span>
             </div>
           ) : isOnline ? (
-            <div className="status-pill status-online" title={`Backend v${health.version}`}>
+            <div className="status-pill status-online" title={`FastAPI v${health.version} active on ${health.device}`}>
               <span className="status-dot" />
               <span>Online ({health.device})</span>
             </div>

@@ -1,5 +1,5 @@
 import React from "react";
-import { Trash2, CheckCircle2, XCircle, Clock, Download } from "lucide-react";
+import { Trash2, CheckCircle2, XCircle, Clock, Download, Layers } from "lucide-react";
 import { BatchItemResult } from "../../types/api";
 import { downloadDataUri } from "../../services/api";
 
@@ -32,16 +32,17 @@ export const BatchQueue: React.FC<BatchQueueProps> = ({
   };
 
   return (
-    <div className="card" style={{ marginTop: "1.5rem" }}>
+    <div className="card" style={{ marginTop: "1rem" }}>
       <div className="card-header">
         <div className="card-title">
-          <span>Batch Queue ({entries.length}/10)</span>
+          <Layers size={16} color="var(--accent-primary)" />
+          <span>Batch Queue ({entries.length}/10 Items)</span>
         </div>
         {!disabled && (
           <button
             onClick={onClearAll}
             className="btn btn-outline"
-            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+            style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}
           >
             Clear All
           </button>
@@ -70,23 +71,23 @@ export const BatchQueue: React.FC<BatchQueueProps> = ({
                       : ""}
                   </div>
                   {res?.error && (
-                    <div style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "2px" }}>
+                    <div style={{ color: "var(--danger-text)", fontSize: "0.6875rem", marginTop: "2px" }}>
                       {res.error}
                     </div>
                   )}
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 {!res ? (
-                  <span className="badge badge-pending">
-                    <Clock size={12} />
+                  <span className="badge badge-outline">
+                    <Clock size={11} />
                     <span>Ready</span>
                   </span>
                 ) : res.status === "success" ? (
                   <>
                     <span className="badge badge-success">
-                      <CheckCircle2 size={12} />
+                      <CheckCircle2 size={11} />
                       <span>Restored</span>
                     </span>
                     {res.image_base64 && (
@@ -98,16 +99,17 @@ export const BatchQueue: React.FC<BatchQueueProps> = ({
                           )
                         }
                         className="btn btn-secondary"
-                        style={{ padding: "0.35rem 0.6rem", fontSize: "0.75rem" }}
+                        style={{ padding: "0.25rem 0.5rem", fontSize: "0.6875rem" }}
                         title="Download restored image"
                       >
-                        <Download size={14} />
+                        <Download size={13} />
+                        <span>PNG</span>
                       </button>
                     )}
                   </>
                 ) : (
                   <span className="badge badge-danger">
-                    <XCircle size={12} />
+                    <XCircle size={11} />
                     <span>Failed</span>
                   </span>
                 )}
@@ -118,13 +120,15 @@ export const BatchQueue: React.FC<BatchQueueProps> = ({
                     style={{
                       background: "transparent",
                       border: "none",
-                      color: "var(--text-muted)",
+                      color: "var(--text-secondary)",
                       cursor: "pointer",
                       padding: "4px",
+                      display: "flex",
+                      alignItems: "center",
                     }}
-                    title="Remove item"
+                    title="Remove from batch"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                   </button>
                 )}
               </div>

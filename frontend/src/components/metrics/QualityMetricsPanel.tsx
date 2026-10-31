@@ -25,19 +25,19 @@ export const QualityMetricsPanel: React.FC<QualityMetricsPanelProps> = ({
   };
 
   return (
-    <div className="card" style={{ marginTop: "1.5rem" }}>
+    <div className="card" style={{ marginTop: "1rem" }}>
       <div className="card-header">
         <div className="card-title">
-          <Activity size={18} color="var(--accent-primary)" />
-          <span>Diagnostic Quality Metrics</span>
+          <Activity size={16} color="var(--accent-primary)" />
+          <span>Pipeline Diagnostic Metrics</span>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.35rem" }}>
           <span className="badge badge-success">
-            <Cpu size={12} />
+            <Cpu size={11} />
             <span>{metrics.device}</span>
           </span>
-          <span className="badge badge-pending">
-            <Clock size={12} />
+          <span className="badge badge-outline">
+            <Clock size={11} />
             <span>{(metrics.elapsed_seconds * 1000).toFixed(0)} ms</span>
           </span>
         </div>
@@ -53,14 +53,14 @@ export const QualityMetricsPanel: React.FC<QualityMetricsPanelProps> = ({
               metrics.sharpness_delta >= 0 ? "delta-positive" : "delta-neutral"
             }`}
           >
-            <Zap size={12} />
+            <Zap size={11} />
             <span>{formatDelta(metrics.sharpness_delta)} change</span>
           </div>
         </div>
 
         {/* Contrast */}
         <div className="metric-card">
-          <div className="metric-label">Contrast (Std Dev)</div>
+          <div className="metric-label">Dynamic Contrast (Std Dev)</div>
           <div className="metric-value">{metrics.contrast.toFixed(1)}</div>
           <div
             className={`metric-delta ${
@@ -87,11 +87,11 @@ export const QualityMetricsPanel: React.FC<QualityMetricsPanelProps> = ({
             {processedWidth}×{processedHeight}
           </div>
           <div className="metric-delta delta-neutral">
-            <Maximize2 size={12} />
+            <Maximize2 size={11} />
             <span>
               {wasResized
                 ? `Downscaled from ${originalWidth}×${originalHeight}`
-                : "Original Scale Preserved"}
+                : "Original Scale"}
             </span>
           </div>
         </div>
@@ -99,4 +99,3 @@ export const QualityMetricsPanel: React.FC<QualityMetricsPanelProps> = ({
     </div>
   );
 };
-

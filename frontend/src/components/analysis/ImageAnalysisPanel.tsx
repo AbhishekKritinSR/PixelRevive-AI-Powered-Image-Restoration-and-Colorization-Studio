@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Sparkles,
   Search,
   AlertTriangle,
   Clock,
@@ -69,20 +68,20 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
   }
 
   return (
-    <div className="card analysis-panel" style={{ marginTop: "1rem" }}>
+    <div className="card analysis-panel">
       <div className="card-header" style={{ paddingBottom: "0.5rem" }}>
         <div className="card-title">
-          <Search size={18} color="var(--accent-primary)" />
-          <span>Intelligent Image Analysis</span>
+          <Search size={16} color="var(--accent-primary)" />
+          <span>Image Degradation Analysis</span>
         </div>
         {analysis && (
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div style={{ display: "flex", gap: "0.35rem" }}>
             <span className="badge badge-success">
-              <ShieldCheck size={12} />
-              <span>Diagnostic Pass</span>
+              <ShieldCheck size={11} />
+              <span>Complete</span>
             </span>
-            <span className="badge badge-pending">
-              <Clock size={12} />
+            <span className="badge badge-outline">
+              <Clock size={11} />
               <span>{(analysis.elapsed_seconds * 1000).toFixed(0)} ms</span>
             </span>
           </div>
@@ -90,27 +89,26 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
       </div>
 
       {!analysis && !isAnalyzing && (
-        <div style={{ padding: "0.75rem 0" }}>
+        <div>
           <p
             style={{
-              fontSize: "0.8125rem",
+              fontSize: "0.75rem",
               color: "var(--text-secondary)",
-              marginBottom: "0.75rem",
-              lineHeight: 1.5,
+              marginBottom: "0.625rem",
+              lineHeight: 1.4,
             }}
           >
-            Run heuristic noise, sharpness, and chromatic diagnostics to evaluate photograph
-            degradations and generate explainable restoration settings.
+            Compute noise residuals, edge sharpness variance, and chromatic saturation to generate optimal restoration recommendations.
           </p>
           <button
             type="button"
             className="btn btn-secondary"
             onClick={handleRunAnalysis}
             disabled={disabled || isAnalyzing}
-            style={{ width: "100%", justifyContent: "center", fontSize: "0.8125rem", padding: "0.5rem" }}
+            style={{ width: "100%", justifyContent: "center", fontSize: "0.8125rem", padding: "0.45rem" }}
           >
             <Search size={14} />
-            <span>Analyze Image Diagnostics</span>
+            <span>Analyze Photograph</span>
           </button>
         </div>
       )}
@@ -118,29 +116,38 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
       {isAnalyzing && (
         <div
           style={{
-            padding: "1.5rem",
+            padding: "1.25rem",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "0.75rem",
+            gap: "0.5rem",
           }}
         >
-          <div className="spinner" style={{ width: "24px", height: "24px", borderTopColor: "var(--accent-primary)" }} />
-          <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
-            Computing Laplacian variance, noise residuals & chromatic dispersion...
+          <div
+            className="spinner"
+            style={{
+              width: "20px",
+              height: "20px",
+              border: "2px solid var(--border-primary)",
+              borderTopColor: "var(--accent-primary)",
+              borderRadius: "50%",
+            }}
+          />
+          <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+            Computing Laplacian variance & chromatic dispersion...
           </span>
         </div>
       )}
 
       {errorMessage && (
-        <div className="alert alert-warning" style={{ marginTop: "0.5rem", fontSize: "0.8125rem" }}>
+        <div className="alert alert-warning" style={{ marginTop: "0.5rem", fontSize: "0.75rem", padding: "0.5rem 0.75rem" }}>
           <AlertTriangle size={14} />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {analysis && !isAnalyzing && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem", marginTop: "0.5rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {/* Key Metrics Chips */}
           <div
             style={{
@@ -163,7 +170,7 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
                     ? "badge-pending"
                     : "badge-danger"
                 }`}
-                style={{ fontSize: "0.6875rem", marginTop: "0.25rem" }}
+                style={{ fontSize: "0.625rem", marginTop: "0.25rem", alignSelf: "flex-start" }}
               >
                 {analysis.analysis.noise.noise_level.toUpperCase()} NOISE
               </span>
@@ -183,7 +190,7 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
                     ? "badge-pending"
                     : "badge-warning"
                 }`}
-                style={{ fontSize: "0.6875rem", marginTop: "0.25rem" }}
+                style={{ fontSize: "0.625rem", marginTop: "0.25rem", alignSelf: "flex-start" }}
               >
                 {analysis.analysis.sharpness.sharpness_level.toUpperCase()}
               </span>
@@ -191,7 +198,7 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
 
             {/* Contrast */}
             <div className="analysis-stat-box">
-              <div className="analysis-stat-label">Contrast Dynamic</div>
+              <div className="analysis-stat-label">Dynamic Contrast</div>
               <div className="analysis-stat-val">
                 {analysis.analysis.contrast.contrast_score.toFixed(1)} σ
               </div>
@@ -202,9 +209,9 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
                     ? "badge-success"
                     : "badge-warning"
                 }`}
-                style={{ fontSize: "0.6875rem", marginTop: "0.25rem" }}
+                style={{ fontSize: "0.625rem", marginTop: "0.25rem", alignSelf: "flex-start" }}
               >
-                {analysis.analysis.contrast.contrast_level.toUpperCase()} CONTRAST
+                {analysis.analysis.contrast.contrast_level.toUpperCase()}
               </span>
             </div>
 
@@ -215,8 +222,8 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
                 {analysis.analysis.monochrome.is_monochrome ? "Monochrome" : "Color"}
               </div>
               <span
-                className="badge badge-success"
-                style={{ fontSize: "0.6875rem", marginTop: "0.25rem" }}
+                className="badge badge-outline"
+                style={{ fontSize: "0.625rem", marginTop: "0.25rem", alignSelf: "flex-start" }}
               >
                 {(analysis.analysis.monochrome.confidence * 100).toFixed(0)}% CONFIDENCE
               </span>
@@ -226,15 +233,15 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
           {/* Detected Photographic Issues */}
           {analysis.detected_issues.length > 0 && (
             <div style={{ fontSize: "0.75rem" }}>
-              <div style={{ color: "var(--text-muted)", marginBottom: "0.35rem", fontWeight: 600 }}>
-                DETECTED CHARACTERISTICS:
+              <div style={{ color: "var(--text-secondary)", marginBottom: "0.25rem", fontWeight: 600, fontSize: "0.6875rem", textTransform: "uppercase" }}>
+                Detected Characteristics:
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
                 {analysis.detected_issues.map((issue, idx) => (
                   <span
                     key={idx}
-                    className="badge badge-pending"
-                    style={{ fontSize: "0.6875rem", padding: "0.2rem 0.5rem" }}
+                    className="badge badge-outline"
+                    style={{ fontSize: "0.6875rem" }}
                   >
                     {issue}
                   </span>
@@ -246,34 +253,32 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
           {/* Recommendations Breakdown */}
           <div
             style={{
-              background: "var(--bg-surface)",
-              borderRadius: "var(--radius-md)",
-              padding: "0.75rem",
-              fontSize: "0.8125rem",
+              background: "var(--bg-subtle)",
+              borderRadius: "var(--radius-sm)",
+              padding: "0.625rem 0.75rem",
+              fontSize: "0.75rem",
               display: "flex",
               flexDirection: "column",
-              gap: "0.5rem",
+              gap: "0.4rem",
               border: "1px solid var(--border-subtle)",
             }}
           >
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.35rem",
                 fontWeight: 600,
                 color: "var(--text-primary)",
+                fontSize: "0.75rem",
+                marginBottom: "0.15rem",
               }}
             >
-              <Sparkles size={14} color="var(--accent-primary)" />
-              <span>Restoration Recommendations</span>
+              Restoration Recommendations
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
               <div className="recommendation-row">
                 <span className="recommendation-target">Denoising:</span>
                 <span className={analysis.recommended_options.denoise.recommended ? "rec-badge-yes" : "rec-badge-no"}>
-                  {analysis.recommended_options.denoise.recommended ? "Recommended" : "Not Recommended"}
+                  {analysis.recommended_options.denoise.recommended ? "Recommended" : "Optional"}
                 </span>
                 <span className="recommendation-reason">{analysis.recommended_options.denoise.reason}</span>
               </div>
@@ -281,7 +286,7 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
               <div className="recommendation-row">
                 <span className="recommendation-target">Contrast:</span>
                 <span className={analysis.recommended_options.contrast.recommended ? "rec-badge-yes" : "rec-badge-no"}>
-                  {analysis.recommended_options.contrast.recommended ? "Recommended" : "Not Recommended"}
+                  {analysis.recommended_options.contrast.recommended ? "Recommended" : "Optional"}
                 </span>
                 <span className="recommendation-reason">{analysis.recommended_options.contrast.reason}</span>
               </div>
@@ -289,7 +294,7 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
               <div className="recommendation-row">
                 <span className="recommendation-target">Sharpen:</span>
                 <span className={analysis.recommended_options.sharpen.recommended ? "rec-badge-yes" : "rec-badge-no"}>
-                  {analysis.recommended_options.sharpen.recommended ? "Recommended" : "Not Recommended"}
+                  {analysis.recommended_options.sharpen.recommended ? "Recommended" : "Optional"}
                 </span>
                 <span className="recommendation-reason">{analysis.recommended_options.sharpen.reason}</span>
               </div>
@@ -297,7 +302,7 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
               <div className="recommendation-row">
                 <span className="recommendation-target">Colorize:</span>
                 <span className={analysis.recommended_options.colorize.recommended ? "rec-badge-yes" : "rec-badge-no"}>
-                  {analysis.recommended_options.colorize.recommended ? "Recommended" : "Not Recommended"}
+                  {analysis.recommended_options.colorize.recommended ? "Recommended" : "Optional"}
                 </span>
                 <span className="recommendation-reason">{analysis.recommended_options.colorize.reason}</span>
               </div>
@@ -307,27 +312,27 @@ export const ImageAnalysisPanel: React.FC<ImageAnalysisPanelProps> = ({
           {/* 1-Click Apply Action */}
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-secondary"
             onClick={handleApply}
             disabled={disabled}
             style={{
               width: "100%",
               justifyContent: "center",
-              fontSize: "0.8125rem",
-              padding: "0.5rem",
-              background: appliedFeedback ? "var(--success)" : undefined,
+              fontSize: "0.75rem",
+              padding: "0.45rem",
               borderColor: appliedFeedback ? "var(--success)" : undefined,
+              color: appliedFeedback ? "var(--success)" : undefined,
             }}
           >
             {appliedFeedback ? (
               <>
-                <Check size={14} />
-                <span>Recommendations Applied!</span>
+                <Check size={13} />
+                <span>Recommendations Applied to Settings</span>
               </>
             ) : (
               <>
-                <Layers size={14} />
-                <span>Apply Recommended Settings</span>
+                <Layers size={13} />
+                <span>Apply Recommendations to Settings</span>
               </>
             )}
           </button>

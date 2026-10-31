@@ -27,7 +27,7 @@ export const BatchDropZone: React.FC<BatchDropZoneProps> = ({
     const availableSlots = maxFiles - currentCount;
 
     if (availableSlots <= 0) {
-      setValidationError(`Batch limit of ${maxFiles} images has already been reached.`);
+      setValidationError(`Maximum batch limit of ${maxFiles} images has already been reached.`);
       return;
     }
 
@@ -41,7 +41,7 @@ export const BatchDropZone: React.FC<BatchDropZoneProps> = ({
     for (const file of filesToExamine) {
       const ext = "." + file.name.split(".").pop()?.toLowerCase();
       if (!ALLOWED_EXTENSIONS.includes(ext)) {
-        setValidationError(`Skipped '${file.name}': Unsupported format.`);
+        setValidationError(`Skipped '${file.name}': Unsupported format (${ext}).`);
         continue;
       }
       if (file.size > MAX_SIZE_BYTES) {
@@ -84,29 +84,31 @@ export const BatchDropZone: React.FC<BatchDropZoneProps> = ({
 
       <div
         className={`dropzone ${isDragging ? "active" : ""}`}
-        style={{ minHeight: "180px", padding: "2rem 1.5rem" }}
+        style={{ minHeight: "160px", padding: "1.5rem 1rem" }}
         onDragOver={handleDragOver}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         onClick={() => !disabled && currentCount < maxFiles && fileInputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        aria-label="Upload Multiple Images"
       >
-        <div className="dropzone-icon" style={{ width: "44px", height: "44px", marginBottom: "0.75rem" }}>
-          <UploadCloud size={24} />
+        <div className="dropzone-icon" style={{ width: "40px", height: "40px", marginBottom: "0.5rem" }}>
+          <UploadCloud size={20} />
         </div>
-        <div className="dropzone-title">Add multiple photographs</div>
+        <div className="dropzone-title">Upload Multiple Photographs</div>
         <div className="dropzone-desc">
-          Drag & drop up to {maxFiles} images ({maxFiles - currentCount} slots remaining)
+          Drag & drop up to {maxFiles} images ({maxFiles - currentCount} slots available)
         </div>
-        <div className="dropzone-limits">JPG, PNG, WEBP • Max 25 MB per photo</div>
+        <div className="dropzone-limits">JPG, JPEG, PNG, WEBP • Up to 25 MB each</div>
       </div>
 
       {validationError && (
-        <div className="alert alert-warning" style={{ marginTop: "0.75rem", padding: "0.5rem 0.75rem" }}>
-          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: "0.8125rem" }}>{validationError}</span>
+        <div className="alert alert-warning" style={{ marginTop: "0.5rem", padding: "0.5rem 0.75rem", fontSize: "0.75rem" }}>
+          <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+          <span>{validationError}</span>
         </div>
       )}
     </div>
   );
 };
-

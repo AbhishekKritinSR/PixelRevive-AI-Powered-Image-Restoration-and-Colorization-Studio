@@ -10,9 +10,9 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({ message, onDismiss }) 
   if (!message) return null;
 
   return (
-    <div className="alert alert-danger" role="alert">
-      <AlertCircle size={20} style={{ flexShrink: 0, marginTop: "2px" }} />
-      <div style={{ flex: 1, fontSize: "0.875rem" }}>
+    <div className="alert alert-danger" role="alert" style={{ padding: "0.625rem 0.875rem", alignItems: "center" }}>
+      <AlertCircle size={16} style={{ flexShrink: 0 }} />
+      <div style={{ flex: 1, fontSize: "0.8125rem" }}>
         <strong>Error: </strong>
         {message}
       </div>
@@ -25,13 +25,14 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({ message, onDismiss }) 
             color: "inherit",
             cursor: "pointer",
             padding: "2px",
+            display: "flex",
+            alignItems: "center",
           }}
           aria-label="Dismiss error"
         >
-          <X size={16} />
+          <X size={15} />
         </button>
       )}
     </div>
   );
 };
-

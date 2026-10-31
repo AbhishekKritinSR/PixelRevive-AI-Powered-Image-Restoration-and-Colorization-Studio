@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { UploadCloud, X, AlertTriangle } from "lucide-react";
+import { UploadCloud, X, AlertTriangle, FileImage } from "lucide-react";
 
 interface DropZoneProps {
   selectedFile: File | null;
@@ -99,35 +99,69 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
   if (selectedFile && previewUrl) {
     return (
-      <div className="card" style={{ padding: "1rem" }}>
-        <div style={{ position: "relative", borderRadius: "var(--radius-md)", overflow: "hidden", background: "#000" }}>
+      <div className="card" style={{ padding: "0.875rem" }}>
+        <div
+          style={{
+            position: "relative",
+            borderRadius: "var(--radius-sm)",
+            overflow: "hidden",
+            background: "var(--bg-subtle)",
+            border: "1px solid var(--border-subtle)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <img
             src={previewUrl}
             alt="Original Preview"
-            style={{ width: "100%", maxHeight: "280px", objectFit: "contain", display: "block" }}
+            style={{ width: "100%", maxHeight: "240px", objectFit: "contain", display: "block" }}
           />
           {!disabled && (
             <button
               onClick={handleClear}
-              className="btn btn-danger"
+              className="btn btn-secondary"
               style={{
                 position: "absolute",
                 top: "0.5rem",
                 right: "0.5rem",
-                padding: "0.35rem 0.6rem",
+                padding: "0.3rem 0.6rem",
                 fontSize: "0.75rem",
+                background: "rgba(255, 255, 255, 0.95)",
               }}
-              title="Remove image"
+              title="Change photograph"
             >
-              <X size={14} />
+              <X size={13} />
               <span>Change</span>
             </button>
           )}
         </div>
 
-        <div style={{ marginTop: "0.75rem", display: "flex", justifyContent: "space-between", fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
-          <div style={{ fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "180px" }}>
-            {selectedFile.name}
+        <div
+          style={{
+            marginTop: "0.625rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontSize: "0.75rem",
+            color: "var(--text-secondary)",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 600,
+              color: "var(--text-primary)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "200px",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+            }}
+          >
+            <FileImage size={14} color="var(--accent-primary)" />
+            <span>{selectedFile.name}</span>
           </div>
           <div style={{ fontFamily: "var(--font-mono)" }}>
             {imageDims ? `${imageDims.width}×${imageDims.height} • ` : ""}
@@ -154,19 +188,22 @@ export const DropZone: React.FC<DropZoneProps> = ({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => !disabled && fileInputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        aria-label="Upload Image"
       >
         <div className="dropzone-icon">
-          <UploadCloud size={28} />
+          <UploadCloud size={22} />
         </div>
-        <div className="dropzone-title">Upload a photograph to restore</div>
-        <div className="dropzone-desc">Drag and drop here, or click to browse files</div>
-        <div className="dropzone-limits">JPG, PNG, WEBP • Max 25 MB</div>
+        <div className="dropzone-title">Upload Image</div>
+        <div className="dropzone-desc">Drag and drop here, or click to browse</div>
+        <div className="dropzone-limits">JPG, JPEG, PNG, WEBP • Up to 25 MB</div>
       </div>
 
       {validationError && (
-        <div className="alert alert-warning" style={{ marginTop: "0.75rem", padding: "0.625rem 0.875rem" }}>
-          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: "0.8125rem" }}>{validationError}</span>
+        <div className="alert alert-warning" style={{ marginTop: "0.625rem", padding: "0.5rem 0.75rem" }}>
+          <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: "0.75rem" }}>{validationError}</span>
         </div>
       )}
     </div>

@@ -46,16 +46,13 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
   const [viewMode, setViewMode] = useState<"slider" | "split">("slider");
 
   useEffect(() => {
-    // Fetch registered models for the model selector
     fetchModelRegistry()
       .then((res) => {
         if (res && res.models) {
           setAvailableModels(res.models);
         }
       })
-      .catch(() => {
-        // Fallback default model already handled in RestorationControls
-      });
+      .catch(() => {});
   }, []);
 
   const handleFileSelect = (file: File) => {
@@ -117,7 +114,7 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
 
       <div className="workspace-grid">
         {/* Left Column: Upload, Image Analysis & Configuration Controls */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <DropZone
             selectedFile={selectedFile}
             onFileSelect={handleFileSelect}
@@ -134,7 +131,7 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
             />
           )}
 
-          {/* Enhanced Restoration Controls */}
+          {/* Restoration Controls */}
           <RestorationControls
             options={options}
             onChange={setOptions}
@@ -146,12 +143,13 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
           <Button
             variant="primary"
             block
-            icon={<Sparkles size={18} />}
+            icon={<Sparkles size={16} />}
             isLoading={isProcessing}
             disabled={!selectedFile || isProcessing}
             onClick={handleProcess}
+            style={{ padding: "0.625rem 1rem", fontSize: "0.875rem", fontWeight: 600 }}
           >
-            {options.colorize ? "Restore & Colorize" : "Apply Classical Restoration"}
+            {options.colorize ? "Restore & Colorize" : "Apply Restoration Pipeline"}
           </Button>
         </div>
 
@@ -161,7 +159,7 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
             <div
               className="card"
               style={{
-                minHeight: "480px",
+                minHeight: "440px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -172,26 +170,29 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
             >
               <div
                 style={{
-                  width: "64px",
-                  height: "64px",
-                  borderRadius: "50%",
-                  background: "rgba(99, 102, 241, 0.12)",
+                  width: "52px",
+                  height: "52px",
+                  borderRadius: "var(--radius-md)",
+                  background: "var(--accent-subtle)",
+                  border: "1px solid var(--accent-subtle-border)",
                   color: "var(--accent-primary)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Loader2 size={32} className="spinner" />
+                <Loader2 size={26} className="spinner" />
               </div>
-              <div style={{ fontSize: "1.125rem", fontWeight: 700 }}>
-                Applying Computer Vision Pipeline...
-              </div>
-              <div style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "380px", lineHeight: "1.5" }}>
-                Running Non-Local Means denoising, CLAHE contrast recovery, Laplacian sharpening
-                {options.repair ? ", archival scratch inpainting" : ""}
-                {options.colorize ? ", neural deep colorization" : ""}
-                {options.upscale ? `, and FSRCNN ${options.scale ?? 2}× super-resolution` : ""}.
+              <div>
+                <div style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                  Processing Image Restoration...
+                </div>
+                <div style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", maxWidth: "380px", lineHeight: "1.5", marginTop: "0.25rem" }}>
+                  Applying Non-Local Means denoising, CLAHE contrast recovery, Laplacian sharpening
+                  {options.repair ? ", archival scratch inpainting" : ""}
+                  {options.colorize ? ", neural deep colorization" : ""}
+                  {options.upscale ? `, and FSRCNN ${options.scale ?? 2}× super-resolution` : ""}.
+                </div>
               </div>
             </div>
           ) : result && originalUrl ? (
@@ -202,23 +203,35 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  marginBottom: "1rem",
+                  marginBottom: "0.75rem",
                   flexWrap: "wrap",
                   gap: "0.75rem",
                 }}
               >
-                <div style={{ display: "flex", gap: "0.5rem" }}>
+                <div style={{ display: "flex", gap: "0.35rem" }}>
                   <button
+                    type="button"
                     className={`btn ${viewMode === "slider" ? "btn-secondary" : "btn-outline"}`}
-                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8125rem" }}
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      fontSize: "0.8125rem",
+                      borderColor: viewMode === "slider" ? "var(--accent-primary)" : undefined,
+                      color: viewMode === "slider" ? "var(--accent-primary)" : undefined,
+                    }}
                     onClick={() => setViewMode("slider")}
                   >
                     <Layers size={14} />
                     <span>Comparison Slider</span>
                   </button>
                   <button
+                    type="button"
                     className={`btn ${viewMode === "split" ? "btn-secondary" : "btn-outline"}`}
-                    style={{ padding: "0.4rem 0.8rem", fontSize: "0.8125rem" }}
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      fontSize: "0.8125rem",
+                      borderColor: viewMode === "split" ? "var(--accent-primary)" : undefined,
+                      color: viewMode === "split" ? "var(--accent-primary)" : undefined,
+                    }}
                     onClick={() => setViewMode("split")}
                   >
                     <Columns size={14} />
@@ -228,9 +241,9 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
 
                 <Button
                   variant="primary"
-                  icon={<Download size={16} />}
+                  icon={<Download size={15} />}
                   onClick={handleDownload}
-                  style={{ padding: "0.45rem 1rem", fontSize: "0.875rem" }}
+                  style={{ padding: "0.4rem 0.875rem", fontSize: "0.8125rem" }}
                 >
                   Download Restored PNG
                 </Button>
@@ -278,37 +291,36 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
             <div
               className="card"
               style={{
-                minHeight: "480px",
+                minHeight: "440px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 textAlign: "center",
-                padding: "3rem 1.5rem",
+                padding: "2.5rem 1.5rem",
               }}
             >
               <div
                 style={{
-                  width: "60px",
-                  height: "60px",
-                  borderRadius: "50%",
-                  background: "var(--bg-surface)",
-                  color: "var(--text-muted)",
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "var(--radius-md)",
+                  background: "var(--bg-subtle)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-secondary)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  marginBottom: "1.25rem",
+                  marginBottom: "0.875rem",
                 }}
               >
-                <ImageIcon size={30} />
+                <ImageIcon size={24} />
               </div>
-              <div style={{ fontSize: "1.125rem", fontWeight: 700, marginBottom: "0.5rem" }}>
-                Interactive Restoration Workspace
+              <div style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)", marginBottom: "0.25rem" }}>
+                Image Workspace
               </div>
-              <div style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "440px", lineHeight: "1.6" }}>
-                Upload a damaged, noisy, or vintage monochrome photograph to begin. Run intelligent diagnostics
-                to inspect noise and sharpness, adjust restoration toggles, or compare before-and-after
-                results with the interactive slider and scientific quality dashboard.
+              <div style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", maxWidth: "380px", lineHeight: "1.5" }}>
+                Upload a photograph on the left to begin restoration. Configure adaptive denoising, scratch repair, contrast recovery, and neural colorization to preview results.
               </div>
             </div>
           )}

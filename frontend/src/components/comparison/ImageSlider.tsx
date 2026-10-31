@@ -86,29 +86,29 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
       {/* Zoom Toolbar */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "0.25rem 0.5rem",
+          padding: "0.2rem 0.25rem",
           fontSize: "0.75rem",
           color: "var(--text-secondary)",
         }}
       >
         <span>
-          Use mouse or arrow keys to drag slider. Current: <strong>{sliderPosition.toFixed(0)}%</strong>
+          Comparison Position: <strong>{sliderPosition.toFixed(0)}%</strong>
         </span>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
           <button
             type="button"
-            className="btn btn-outline"
+            className="btn btn-secondary"
             style={{ padding: "0.2rem 0.5rem", fontSize: "0.6875rem" }}
             onClick={cycleZoom}
-            title="Inspect fine pixel details"
+            title="Toggle magnification"
           >
             {zoomLevel === 1.0 ? <ZoomIn size={12} /> : <ZoomOut size={12} />}
             <span>Zoom: {zoomLevel}×</span>
@@ -116,7 +116,7 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
           {zoomLevel > 1.0 && (
             <button
               type="button"
-              className="btn btn-outline"
+              className="btn btn-secondary"
               style={{ padding: "0.2rem 0.4rem", fontSize: "0.6875rem" }}
               onClick={() => setZoomLevel(1.0)}
               title="Reset Zoom"
@@ -187,8 +187,8 @@ export const ImageSlider: React.FC<ImageSliderProps> = ({
             className="comparison-divider"
             style={{ left: `${sliderPosition}%` }}
           >
-            <div className="comparison-handle" title="Drag or use arrow keys to compare">
-              <MoveHorizontal size={18} />
+            <div className="comparison-handle" title="Drag to compare before and after">
+              <MoveHorizontal size={16} />
             </div>
           </div>
 

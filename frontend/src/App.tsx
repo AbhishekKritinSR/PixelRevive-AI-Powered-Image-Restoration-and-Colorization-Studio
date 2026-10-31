@@ -45,14 +45,6 @@ export const App: React.FC = () => {
       />
 
       <main className="main-content">
-        <div className="hero-banner">
-          <h1 className="hero-title">PixelRevive – AI-Powered Image Restoration</h1>
-          <p className="hero-subtitle">
-            Restore vintage and damaged photographs using adaptive denoising, CLAHE contrast recovery,
-            archival scratch inpainting, FSRCNN super-resolution, and Caffe deep colorization with perceptual quality assessment.
-          </p>
-        </div>
-
         {activeTab === "single" ? (
           <SingleRestorationView isModelReady={modelStatus?.ready_for_inference ?? true} />
         ) : (
@@ -62,11 +54,13 @@ export const App: React.FC = () => {
 
       <footer
         style={{
-          borderTop: "1px solid var(--border-subtle)",
-          padding: "1.5rem",
+          borderTop: "1px solid var(--border-primary)",
+          background: "var(--bg-surface)",
+          padding: "1rem 1.5rem",
           textAlign: "center",
-          fontSize: "0.8125rem",
-          color: "var(--text-muted)",
+          fontSize: "0.75rem",
+          color: "var(--text-secondary)",
+          marginTop: "auto",
         }}
       >
         PixelRevive – AI-Powered Image Restoration • OpenCV & Deep Learning • FastAPI & React
@@ -83,4 +77,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-

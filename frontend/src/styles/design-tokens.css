@@ -1,58 +1,72 @@
 :root {
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* Color Palette - Modern Dark Theme */
-  --bg-app: #0b0f19;
-  --bg-card: #111827;
-  --bg-card-hover: #162032;
-  --bg-surface: #1f2937;
-  --bg-surface-subtle: rgba(255, 255, 255, 0.03);
+  /* Primary Light Theme Palette */
+  --bg-app: #F5F6F8;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8F9FA;
+  --bg-subtle: #F1F3F4;
+  --bg-muted: #E8EAED;
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-focus: #6366f1;
-  --border-active: rgba(99, 102, 241, 0.4);
+  /* Text Colors */
+  --text-primary: #202124;
+  --text-secondary: #5F6368;
+  --text-muted: #80868B;
+  --text-inverse: #FFFFFF;
 
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  /* Borders & Dividers */
+  --border-primary: #DADCE0;
+  --border-subtle: #E8EAED;
+  --border-focus: #2563EB;
+  --border-active: #1D4ED8;
 
-  /* Accent & Status */
-  --accent-primary: #6366f1;
-  --accent-primary-hover: #4f46e5;
-  --accent-secondary: #8b5cf6;
-  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  /* Primary Accent & Brand (Restrained Professional Blue) */
+  --accent-primary: #2563EB;
+  --accent-primary-hover: #1D4ED8;
+  --accent-primary-active: #1E40AF;
+  --accent-subtle: #EFF6FF;
+  --accent-subtle-border: #BFDBFE;
 
-  --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.12);
-  --success-border: rgba(16, 185, 129, 0.3);
+  /* Semantic Feedback Colors */
+  --success: #188038;
+  --success-bg: #E6F4EA;
+  --success-border: #CEEAD6;
+  --success-text: #137333;
 
-  --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.12);
-  --warning-border: rgba(245, 158, 11, 0.3);
+  --warning: #B06000;
+  --warning-bg: #FEF7E0;
+  --warning-border: #FEEFC3;
+  --warning-text: #8E4B00;
 
-  --danger: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.12);
-  --danger-border: rgba(239, 68, 68, 0.3);
+  --danger: #D93025;
+  --danger-bg: #FCE8E6;
+  --danger-border: #FAD2CF;
+  --danger-text: #C5221F;
 
-  --info: #3b82f6;
-  --info-bg: rgba(59, 130, 246, 0.12);
+  --info: #1A73E8;
+  --info-bg: #E8F0FE;
+  --info-border: #D2E3FC;
+  --info-text: #174EA6;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.25);
+  /* Restrained Professional Shadows */
+  --shadow-none: none;
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
 
-  /* Radii */
+  /* Corner Radii (Modest, professional desktop appearance) */
+  --radius-xs: 4px;
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
   --radius-full: 9999px;
 
   /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
+  --transition-fast: 120ms ease;
+  --transition-normal: 200ms ease;
 }
 
 * {
@@ -76,7 +90,7 @@ button {
   cursor: pointer;
 }
 
-input, select {
+input, select, textarea {
   font-family: inherit;
+  font-size: inherit;
 }
-

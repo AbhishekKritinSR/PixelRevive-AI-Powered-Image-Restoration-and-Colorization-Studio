@@ -17,25 +17,27 @@ export const AboutModal: React.FC<AboutModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="about-dialog-title">
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: "1.25rem",
+            marginBottom: "1rem",
             borderBottom: "1px solid var(--border-subtle)",
-            paddingBottom: "1rem",
+            paddingBottom: "0.75rem",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-            <div className="logo-badge" style={{ width: "32px", height: "32px" }}>
-              <Sparkles size={18} />
+            <div className="logo-badge" style={{ width: "30px", height: "30px" }}>
+              <Sparkles size={16} />
             </div>
             <div>
-              <div style={{ fontSize: "1.125rem", fontWeight: 700 }}>About PixelRevive</div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+              <div id="about-dialog-title" style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                About PixelRevive
+              </div>
+              <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
                 AI-Powered Image Restoration • Version {version}
               </div>
             </div>
@@ -48,9 +50,12 @@ export const AboutModal: React.FC<AboutModalProps> = ({
               color: "var(--text-secondary)",
               cursor: "pointer",
               padding: "4px",
+              display: "flex",
+              alignItems: "center",
             }}
+            aria-label="Close dialog"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
@@ -58,24 +63,23 @@ export const AboutModal: React.FC<AboutModalProps> = ({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "1rem",
-            fontSize: "0.875rem",
+            gap: "0.875rem",
+            fontSize: "0.8125rem",
             color: "var(--text-secondary)",
-            lineHeight: "1.6",
+            lineHeight: "1.5",
           }}
         >
           <p>
-            <strong style={{ color: "var(--text-primary)" }}>PixelRevive</strong> is a modular,
-            production-grade computer vision application designed to analyze, restore, and colorize
-            vintage, damaged, noisy, and monochrome photographs.
+            <strong style={{ color: "var(--text-primary)" }}>PixelRevive</strong> is a modular computer vision
+            application designed to analyze, restore, and colorize damaged, noisy, and vintage monochrome photographs.
           </p>
 
           <div
             style={{
-              background: "var(--bg-surface-subtle)",
+              background: "var(--bg-subtle)",
               border: "1px solid var(--border-subtle)",
-              borderRadius: "var(--radius-md)",
-              padding: "1rem",
+              borderRadius: "var(--radius-sm)",
+              padding: "0.875rem",
             }}
           >
             <div
@@ -85,74 +89,76 @@ export const AboutModal: React.FC<AboutModalProps> = ({
                 marginBottom: "0.5rem",
                 display: "flex",
                 alignItems: "center",
-                gap: "0.5rem",
+                gap: "0.4rem",
+                fontSize: "0.75rem",
+                textTransform: "uppercase",
               }}
             >
-              <Layers size={16} color="var(--accent-primary)" />
-              <span>Full Computer Vision Pipeline</span>
+              <Layers size={14} color="var(--accent-primary)" />
+              <span>Core Image Restoration Architecture</span>
             </div>
             <ul
               style={{
                 paddingLeft: "1.25rem",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.375rem",
-                fontSize: "0.8125rem",
+                gap: "0.35rem",
+                fontSize: "0.75rem",
               }}
             >
               <li>
-                <strong style={{ color: "var(--text-primary)" }}>Image Analysis (Phase 5.1):</strong> Blind
+                <strong style={{ color: "var(--text-primary)" }}>Image Analysis:</strong> Blind
                 Laplacian noise estimation, edge sharpness analysis, contrast dynamics, and monochrome detection.
               </li>
               <li>
-                <strong style={{ color: "var(--text-primary)" }}>Adaptive Denoising (Phase 5.2):</strong> Non-Local
+                <strong style={{ color: "var(--text-primary)" }}>Adaptive Denoising:</strong> Non-Local
                 Means filtering with automatic noise-aware parameter scaling ($h \in [3, 15]$).
               </li>
               <li>
-                <strong style={{ color: "var(--text-primary)" }}>Archival Scratch Repair (Phase 5.3):</strong> Morphological
-                defect detection and inpainting to eliminate physical cracks, dust spots, and creases.
+                <strong style={{ color: "var(--text-primary)" }}>Archival Scratch Repair:</strong> Morphological
+                defect detection and OpenCV inpainting to eliminate physical cracks, dust spots, and handling creases.
               </li>
               <li>
                 <strong style={{ color: "var(--text-primary)" }}>Contrast & Sharpening:</strong> CLAHE on CIELAB L
                 channel and Laplacian unsharp masking.
               </li>
               <li>
-                <strong style={{ color: "var(--text-primary)" }}>AI Colorization & Model Registry (Phase 5.5):</strong> Deep
+                <strong style={{ color: "var(--text-primary)" }}>AI Colorization & Model Registry:</strong> Deep
                 learning colorization (Zhang et al. ECCV 2016) with extensible model registry and render factor tuning.
               </li>
               <li>
-                <strong style={{ color: "var(--text-primary)" }}>AI Super-Resolution (Phase 5.4):</strong> FSRCNN
+                <strong style={{ color: "var(--text-primary)" }}>AI Super-Resolution:</strong> FSRCNN
                 neural network upscaling by 2× or 4×.
               </li>
               <li>
-                <strong style={{ color: "var(--text-primary)" }}>Quality Assessment Dashboard (Phase 5.6):</strong> BRISQUE
+                <strong style={{ color: "var(--text-primary)" }}>Quality Assessment Dashboard:</strong> BRISQUE
                 natural scene statistics distortion, SSIM structural fidelity, and Hasler–Süsstrunk Colorfulness.
               </li>
             </ul>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
             <div
               style={{
-                background: "var(--bg-surface-subtle)",
+                background: "var(--bg-subtle)",
                 border: "1px solid var(--border-subtle)",
-                borderRadius: "var(--radius-md)",
-                padding: "0.75rem",
+                borderRadius: "var(--radius-sm)",
+                padding: "0.625rem",
               }}
             >
               <div
                 style={{
-                  fontSize: "0.75rem",
-                  color: "var(--text-muted)",
+                  fontSize: "0.6875rem",
+                  color: "var(--text-secondary)",
                   textTransform: "uppercase",
-                  fontWeight: 700,
+                  fontWeight: 600,
                 }}
               >
                 Backend Framework
               </div>
               <div
                 style={{
-                  fontSize: "0.9375rem",
+                  fontSize: "0.875rem",
                   fontWeight: 600,
                   color: "var(--text-primary)",
                   marginTop: "2px",
@@ -163,25 +169,25 @@ export const AboutModal: React.FC<AboutModalProps> = ({
             </div>
             <div
               style={{
-                background: "var(--bg-surface-subtle)",
+                background: "var(--bg-subtle)",
                 border: "1px solid var(--border-subtle)",
-                borderRadius: "var(--radius-md)",
-                padding: "0.75rem",
+                borderRadius: "var(--radius-sm)",
+                padding: "0.625rem",
               }}
             >
               <div
                 style={{
-                  fontSize: "0.75rem",
-                  color: "var(--text-muted)",
+                  fontSize: "0.6875rem",
+                  color: "var(--text-secondary)",
                   textTransform: "uppercase",
-                  fontWeight: 700,
+                  fontWeight: 600,
                 }}
               >
                 Execution Engine
               </div>
               <div
                 style={{
-                  fontSize: "0.9375rem",
+                  fontSize: "0.875rem",
                   fontWeight: 600,
                   color: "var(--text-primary)",
                   marginTop: "2px",
@@ -193,7 +199,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-            <button className="btn btn-secondary" onClick={onClose}>
+            <button className="btn btn-secondary" onClick={onClose} style={{ padding: "0.35rem 0.875rem", fontSize: "0.8125rem" }}>
               Close
             </button>
           </div>

@@ -1,11 +1,11 @@
 import React from "react";
 import {
   Sliders,
-  Wand2,
-  Sun,
-  Sparkles,
   Feather,
   Paintbrush,
+  Sun,
+  Sparkles,
+  Wand2,
   Maximize2,
 } from "lucide-react";
 import { RestorationOptions, ModelRegistryItem } from "../../types/api";
@@ -53,13 +53,15 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
     <div className="card">
       <div className="card-header">
         <div className="card-title">
-          <Sliders size={18} color="var(--accent-primary)" />
+          <Sliders size={16} color="var(--accent-primary)" />
           <span>Restoration Settings</span>
         </div>
       </div>
 
       <div className="options-group">
-        {/* 1. Denoise & Adaptive Denoising */}
+        {/* ============================================================= */}
+        {/* 1. Denoise & Adaptive Denoising                               */}
+        {/* ============================================================= */}
         <div
           className={`option-item ${options.denoise ? "active" : ""}`}
           onClick={() => toggleOption("denoise")}
@@ -67,11 +69,11 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
         >
           <div className="option-info">
             <div className="option-title">
-              <Feather size={16} color="#60a5fa" />
-              <span>Denoise</span>
+              <Feather size={15} color="var(--accent-primary)" />
+              <span>Denoising</span>
             </div>
             <div className="option-desc">
-              Non-Local Means filter removes photographic grain and sensor noise while preserving structural edges.
+              Non-Local Means filter suppresses grain and photographic noise while retaining edge sharpness.
             </div>
           </div>
           <label className="switch" onClick={(e) => e.stopPropagation()}>
@@ -80,6 +82,7 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               checked={options.denoise}
               disabled={disabled}
               onChange={() => toggleOption("denoise")}
+              aria-label="Toggle Denoising"
             />
             <span className="slider" />
           </label>
@@ -91,11 +94,6 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
             className="sub-option-container"
             onClick={(e) => e.stopPropagation()}
             style={{
-              marginLeft: "1.25rem",
-              padding: "0.625rem 0.875rem",
-              background: "var(--bg-surface)",
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--border-subtle)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -104,10 +102,10 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
           >
             <div>
               <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                Adaptive Noise Scaling
+                Adaptive Noise Calibration
               </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                Automatically calibrates filtering strength ($h \in [3, 15]$) based on estimated noise standard deviation.
+              <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
+                Auto-tunes filter strength based on estimated noise standard deviation ($\sigma$).
               </div>
             </div>
             <label className="switch">
@@ -121,13 +119,16 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
                     adaptive_denoise: !(options.adaptive_denoise ?? true),
                   })
                 }
+                aria-label="Toggle Adaptive Noise Calibration"
               />
               <span className="slider" />
             </label>
           </div>
         )}
 
-        {/* 2. Archival Scratch Repair & Inpainting (Phase 5.3) */}
+        {/* ============================================================= */}
+        {/* 2. Archival Scratch Repair & Inpainting (Phase 5.3)           */}
+        {/* ============================================================= */}
         <div
           className={`option-item ${options.repair ? "active" : ""}`}
           onClick={() => toggleOption("repair")}
@@ -135,14 +136,14 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
         >
           <div className="option-info">
             <div className="option-title">
-              <Paintbrush size={16} color="#10b981" />
-              <span>Archival Scratch Repair</span>
-              <span className="badge badge-success" style={{ fontSize: "0.6875rem" }}>
-                Phase 5.3
+              <Paintbrush size={15} color="var(--success)" />
+              <span>Scratch Repair & Inpainting</span>
+              <span className="badge badge-outline" style={{ fontSize: "0.625rem" }}>
+                Archival
               </span>
             </div>
             <div className="option-desc">
-              Detects physical scratches, paper cracks, dust spots, and handling creases, reconstructing missing pixels with morphological inpainting.
+              Detects linear scratches and physical surface defects, reconstructing damaged pixels using OpenCV inpainting.
             </div>
           </div>
           <label className="switch" onClick={(e) => e.stopPropagation()}>
@@ -151,12 +152,15 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               checked={options.repair ?? false}
               disabled={disabled}
               onChange={() => toggleOption("repair")}
+              aria-label="Toggle Scratch Repair"
             />
             <span className="slider" />
           </label>
         </div>
 
-        {/* 3. Contrast Recovery (CLAHE) */}
+        {/* ============================================================= */}
+        {/* 3. Contrast Recovery (CLAHE)                                 */}
+        {/* ============================================================= */}
         <div
           className={`option-item ${options.contrast ? "active" : ""}`}
           onClick={() => toggleOption("contrast")}
@@ -164,11 +168,11 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
         >
           <div className="option-info">
             <div className="option-title">
-              <Sun size={16} color="#f59e0b" />
-              <span>Contrast Enhancement</span>
+              <Sun size={15} color="var(--warning)" />
+              <span>Contrast Enhancement (CLAHE)</span>
             </div>
             <div className="option-desc">
-              Adaptive histogram equalization (CLAHE) on the L channel recovers faded details in deep shadows and highlights.
+              Contrast Limited Adaptive Histogram Equalization recovers faded dynamic range in highlights and shadows.
             </div>
           </div>
           <label className="switch" onClick={(e) => e.stopPropagation()}>
@@ -177,12 +181,15 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               checked={options.contrast}
               disabled={disabled}
               onChange={() => toggleOption("contrast")}
+              aria-label="Toggle Contrast Enhancement"
             />
             <span className="slider" />
           </label>
         </div>
 
-        {/* 4. Laplacian Sharpening */}
+        {/* ============================================================= */}
+        {/* 4. Laplacian Sharpening                                       */}
+        {/* ============================================================= */}
         <div
           className={`option-item ${options.sharpen ? "active" : ""}`}
           onClick={() => toggleOption("sharpen")}
@@ -190,11 +197,11 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
         >
           <div className="option-info">
             <div className="option-title">
-              <Sparkles size={16} color="#a855f7" />
+              <Sparkles size={15} color="var(--accent-primary)" />
               <span>Sharpening</span>
             </div>
             <div className="option-desc">
-              Laplacian unsharp masking enhances soft textural transitions without shifting overall luminance balance.
+              Laplacian unsharp masking enhances soft transitions and fine contours without altering luminance.
             </div>
           </div>
           <label className="switch" onClick={(e) => e.stopPropagation()}>
@@ -203,12 +210,15 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               checked={options.sharpen}
               disabled={disabled}
               onChange={() => toggleOption("sharpen")}
+              aria-label="Toggle Sharpening"
             />
             <span className="slider" />
           </label>
         </div>
 
-        {/* 5. AI Colorization & Render Factor Tuning (Phase 5.5) */}
+        {/* ============================================================= */}
+        {/* 5. AI Colorization & Render Factor Tuning (Phase 5.5)         */}
+        {/* ============================================================= */}
         <div
           className={`option-item ${options.colorize ? "active" : ""}`}
           onClick={() => toggleOption("colorize")}
@@ -216,16 +226,16 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
         >
           <div className="option-info">
             <div className="option-title">
-              <Wand2 size={16} color="#ec4899" />
+              <Wand2 size={15} color="var(--accent-primary)" />
               <span>AI Colorization</span>
               {!isModelReady && (
-                <span className="badge badge-pending" style={{ fontSize: "0.6875rem" }}>
-                  Initializing Weights
+                <span className="badge badge-warning" style={{ fontSize: "0.625rem" }}>
+                  Loading Weights
                 </span>
               )}
             </div>
             <div className="option-desc">
-              Deep convolutional neural network predicts plausible vibrant colors for monochrome photographic prints.
+              Deep convolutional network predicts plausible chromatic distributions for monochrome images.
             </div>
           </div>
           <label className="switch" onClick={(e) => e.stopPropagation()}>
@@ -234,25 +244,21 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               checked={options.colorize}
               disabled={disabled}
               onChange={() => toggleOption("colorize")}
+              aria-label="Toggle AI Colorization"
             />
             <span className="slider" />
           </label>
         </div>
 
-        {/* Colorization Tuning Sub-Panel (Phase 5.5) */}
+        {/* Colorization Tuning Sub-Panel */}
         {options.colorize && (
           <div
             className="sub-option-container"
             onClick={(e) => e.stopPropagation()}
             style={{
-              marginLeft: "1.25rem",
-              padding: "0.875rem",
-              background: "var(--bg-surface)",
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--border-subtle)",
               display: "flex",
               flexDirection: "column",
-              gap: "0.75rem",
+              gap: "0.625rem",
             }}
           >
             {/* Model Selection */}
@@ -262,42 +268,25 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  marginBottom: "0.35rem",
+                  marginBottom: "0.25rem",
                 }}
               >
                 <label
                   style={{
-                    fontSize: "0.8125rem",
+                    fontSize: "0.75rem",
                     fontWeight: 600,
                     color: "var(--text-primary)",
                   }}
                 >
-                  Neural Architecture:
+                  Model Architecture
                 </label>
-                <span
-                  style={{
-                    fontSize: "0.6875rem",
-                    color: "var(--accent-secondary)",
-                    fontFamily: "var(--font-mono)",
-                  }}
-                >
-                  {options.colorization_model || "zhang_caffe"}
-                </span>
               </div>
               <select
                 className="select-input"
                 value={options.colorization_model || "zhang_caffe"}
                 disabled={disabled}
                 onChange={(e) => updateStringOption("colorization_model", e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "0.4rem 0.6rem",
-                  background: "var(--bg-card)",
-                  color: "var(--text-primary)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "var(--radius-sm)",
-                  fontSize: "0.8125rem",
-                }}
+                aria-label="Select Colorization Model"
               >
                 {availableModels.length > 0 ? (
                   availableModels.map((m) => (
@@ -323,23 +312,23 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               >
                 <label
                   style={{
-                    fontSize: "0.8125rem",
+                    fontSize: "0.75rem",
                     fontWeight: 600,
                     color: "var(--text-primary)",
                   }}
                 >
-                  Render Factor:
+                  Render Factor
                 </label>
                 <span
                   style={{
-                    fontSize: "0.8125rem",
-                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
                     color: "var(--accent-primary)",
                     fontFamily: "var(--font-mono)",
                   }}
                 >
                   {options.render_factor ?? 14}
-                  <span style={{ fontSize: "0.6875rem", color: "var(--text-muted)", marginLeft: "0.25rem" }}>
+                  <span style={{ fontSize: "0.6875rem", color: "var(--text-secondary)", marginLeft: "0.25rem" }}>
                     ({(options.render_factor ?? 14) * 16}×{(options.render_factor ?? 14) * 16} grid)
                   </span>
                 </span>
@@ -354,13 +343,14 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
                 disabled={disabled}
                 onChange={(e) => updateNumericOption("render_factor", parseInt(e.target.value, 10))}
                 style={{ width: "100%", accentColor: "var(--accent-primary)", cursor: "pointer" }}
+                aria-label="Render Factor Slider"
               />
 
               {/* Presets */}
-              <div style={{ display: "flex", gap: "0.35rem", marginTop: "0.35rem" }}>
+              <div style={{ display: "flex", gap: "0.25rem", marginTop: "0.35rem" }}>
                 {[
                   { label: "Fast", val: 12 },
-                  { label: "Balanced (14)", val: 14 },
+                  { label: "Standard (14)", val: 14 },
                   { label: "Detailed", val: 24 },
                   { label: "Max HD", val: 36 },
                 ].map((preset) => (
@@ -375,6 +365,14 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
                       padding: "0.2rem 0.35rem",
                       fontSize: "0.6875rem",
                       justifyContent: "center",
+                      borderColor:
+                        (options.render_factor ?? 14) === preset.val
+                          ? "var(--accent-primary)"
+                          : undefined,
+                      color:
+                        (options.render_factor ?? 14) === preset.val
+                          ? "var(--accent-primary)"
+                          : undefined,
                     }}
                     onClick={() => updateNumericOption("render_factor", preset.val)}
                     disabled={disabled}
@@ -383,22 +381,13 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
                   </button>
                 ))}
               </div>
-
-              <div
-                style={{
-                  fontSize: "0.6875rem",
-                  color: "var(--text-muted)",
-                  marginTop: "0.35rem",
-                  lineHeight: 1.4,
-                }}
-              >
-                14 matches native 224×224 receptive field. Higher values preserve finer chromatic transitions for large subjects.
-              </div>
             </div>
           </div>
         )}
 
-        {/* 6. AI Super-Resolution Upscaling (Phase 5.4) */}
+        {/* ============================================================= */}
+        {/* 6. AI Super-Resolution Upscaling (Phase 5.4)                 */}
+        {/* ============================================================= */}
         <div
           className={`option-item ${options.upscale ? "active" : ""}`}
           onClick={() => toggleOption("upscale")}
@@ -406,14 +395,14 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
         >
           <div className="option-info">
             <div className="option-title">
-              <Maximize2 size={16} color="#06b6d4" />
+              <Maximize2 size={15} color="var(--accent-primary)" />
               <span>AI Super-Resolution</span>
-              <span className="badge badge-success" style={{ fontSize: "0.6875rem" }}>
-                Phase 5.4
+              <span className="badge badge-outline" style={{ fontSize: "0.625rem" }}>
+                FSRCNN
               </span>
             </div>
             <div className="option-desc">
-              FSRCNN deep learning upscales photograph resolution by 2× or 4×, reconstructing fine spatial details.
+              FSRCNN neural upscaling magnifies photograph resolution by 2× or 4×, reconstructing fine spatial details.
             </div>
           </div>
           <label className="switch" onClick={(e) => e.stopPropagation()}>
@@ -422,22 +411,18 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               checked={options.upscale ?? false}
               disabled={disabled}
               onChange={() => toggleOption("upscale")}
+              aria-label="Toggle Super-Resolution"
             />
             <span className="slider" />
           </label>
         </div>
 
-        {/* Super-Resolution Scale Factor Selection */}
+        {/* Super-Resolution Scale Selection */}
         {options.upscale && (
           <div
             className="sub-option-container"
             onClick={(e) => e.stopPropagation()}
             style={{
-              marginLeft: "1.25rem",
-              padding: "0.625rem 0.875rem",
-              background: "var(--bg-surface)",
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--border-subtle)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -445,18 +430,18 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
           >
             <div>
               <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                Upscale Factor
+                Magnification Scale
               </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                Select target spatial magnification multiplier.
+              <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
+                Select target upscaling multiplier.
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "0.35rem" }}>
+            <div style={{ display: "flex", gap: "0.25rem" }}>
               <button
                 type="button"
-                className={`btn ${(options.scale ?? 2) === 2 ? "btn-primary" : "btn-outline"}`}
-                style={{ padding: "0.3rem 0.75rem", fontSize: "0.75rem" }}
+                className={`btn ${(options.scale ?? 2) === 2 ? "btn-primary" : "btn-secondary"}`}
+                style={{ padding: "0.25rem 0.625rem", fontSize: "0.75rem" }}
                 onClick={() => updateNumericOption("scale", 2)}
                 disabled={disabled}
               >
@@ -464,8 +449,8 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
               </button>
               <button
                 type="button"
-                className={`btn ${(options.scale ?? 2) === 4 ? "btn-primary" : "btn-outline"}`}
-                style={{ padding: "0.3rem 0.75rem", fontSize: "0.75rem" }}
+                className={`btn ${(options.scale ?? 2) === 4 ? "btn-primary" : "btn-secondary"}`}
+                style={{ padding: "0.25rem 0.625rem", fontSize: "0.75rem" }}
                 onClick={() => updateNumericOption("scale", 4)}
                 disabled={disabled}
               >
