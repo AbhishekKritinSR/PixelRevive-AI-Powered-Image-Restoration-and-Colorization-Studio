@@ -221,8 +221,9 @@ npm run build
 | `GET` | `/` | Root API service identity and health link |
 | `GET` | `/api/v1/health` | Comprehensive system health, uptime, and host details |
 | `GET` | `/api/v1/models/status` | Model weights presence, download status, and readiness |
-| `POST`| `/api/v1/process` | Single-image upload, pipeline execution, and metrics |
-| `POST`| `/api/v1/batch/process`| Multi-image batch processing (up to 10 files) with ZIP |
+| `POST`| `/api/v1/restoration/analyze` | Image quality diagnosis and rule-based recommendations |
+| `POST`| `/api/v1/restoration/process` | Single-image upload, pipeline execution, and metrics |
+| `POST`| `/api/v1/restoration/batch` | Multi-image batch processing (up to 10 files) with ZIP |
 
 ---
 

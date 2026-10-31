@@ -10,9 +10,16 @@ Responsibilities:
 
 from functools import lru_cache
 
+from backend.src.services.analysis_service import AnalysisService
 from backend.src.services.batch_service import BatchService
 from backend.src.services.model_service import ModelService
 from backend.src.services.restoration_service import RestorationService
+
+
+@lru_cache()
+def get_analysis_service() -> AnalysisService:
+    """Return cached singleton instance of AnalysisService."""
+    return AnalysisService()
 
 
 @lru_cache()
