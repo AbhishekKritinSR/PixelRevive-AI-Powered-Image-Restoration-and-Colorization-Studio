@@ -48,6 +48,7 @@ import numpy as np
 from backend.src.core.exceptions import InvalidRenderFactorError
 from backend.src.processing.colorization.base import BaseColorizer
 from backend.src.processing.colorization.metadata import ZHANG_CAFFE_METADATA
+from backend.src.processing.colorization.refiner import refine_chrominance
 from src.config import (
     CLUSTER_CENTER_BIAS,
     DEFAULT_RENDER_FACTOR,
@@ -241,31 +242,16 @@ def colorize_image(
     # Resize original L channel to original image dimensions (safeguard)
     L = cv2.resize(L, (image.shape[1], image.shape[0]))
 
-    # 1. Edge-Preserving Chrominance Alignment (Guided Filtering)
-    if edge_refinement and hasattr(cv2, "ximgproc") and hasattr(cv2.ximgproc, "guidedFilter"):
-        try:
-            L_guide = np.clip(L * 2.55, 0, 255).astype(np.uint8)
-            ab_a = np.ascontiguousarray(ab[:, :, 0], dtype=np.float32)
-            ab_b = np.ascontiguousarray(ab[:, :, 1], dtype=np.float32)
-            a_ref = cv2.ximgproc.guidedFilter(guide=L_guide, src=ab_a, radius=6, eps=100.0)
-            b_ref = cv2.ximgproc.guidedFilter(guide=L_guide, src=ab_b, radius=6, eps=100.0)
-            ab = np.stack([a_ref, b_ref], axis=2)
-        except Exception:
-            pass
-
-    # 2. Temperature and White Balance Compensation (positive = warm/yellow-red, negative = cool/blue)
-    if color_temperature != 0.0:
-        ab[:, :, 1] += float(color_temperature * 4.0)
-        ab[:, :, 0] += float(color_temperature * 1.5)
-
-    # 3. Saturation Tuning in CIE LAB Space
-    if saturation != 1.0 and saturation >= 0.0:
-        ab = ab * float(saturation)
-
-    # 4. Shadow and Highlight Desaturation to Prevent Chromatic Blotches
-    if shadow_attenuation:
-        fade = np.clip((L - 8.0) / 12.0, 0.0, 1.0) * np.clip((95.0 - L) / 8.0, 0.0, 1.0)
-        ab = ab * fade[:, :, np.newaxis]
+    # Chrominance refinement (guided filter edge alignment, temperature balance,
+    # saturation calibration, shadow/highlight chroma attenuation)
+    ab = refine_chrominance(
+        L=L,
+        ab=ab,
+        saturation=saturation,
+        color_temperature=color_temperature,
+        edge_refinement=edge_refinement,
+        shadow_attenuation=shadow_attenuation,
+    )
 
     # Recombine original full-resolution L with CNN-predicted ab channels
     colorized = np.concatenate((L[:, :, np.newaxis], ab), axis=2)

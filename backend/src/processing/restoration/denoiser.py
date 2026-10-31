@@ -166,6 +166,50 @@ def select_denoising_parameters(
     )
 
 
+def _apply_texture_guided_residual(
+    image: np.ndarray,
+    denoised: np.ndarray,
+    is_color: bool,
+    texture_weight: float = 0.35,
+) -> np.ndarray:
+    """Blend high-frequency detail back into textured areas while keeping flat regions clean.
+
+    Flat areas (skies, walls) have near-zero gradient magnitude, ensuring noise is not
+    re-introduced into smooth surfaces. High-gradient areas (fabrics, hair, pores)
+    receive proportional residual injection to prevent the plastic/waxy appearance
+    common in naive Non-Local Means filtering.
+
+    VIT BCSE403L Mapping:
+        Module 2: Spatial Filtering (Sobel gradient operators, spatial domain blending)
+        Module 4: Image Restoration (adaptive spatial noise filtering, detail preservation)
+    """
+    if texture_weight <= 0.0:
+        return denoised
+
+    if is_color:
+        gray_denoised = cv2.cvtColor(denoised, cv2.COLOR_BGR2GRAY)
+    else:
+        gray_denoised = denoised.squeeze() if denoised.ndim == 3 else denoised
+
+    sobel_x = cv2.Sobel(gray_denoised, cv2.CV_32F, 1, 0, ksize=3)
+    sobel_y = cv2.Sobel(gray_denoised, cv2.CV_32F, 0, 1, ksize=3)
+    grad_mag = cv2.magnitude(sobel_x, sobel_y)
+    grad_mag = cv2.GaussianBlur(grad_mag, (5, 5), 1.5)
+    text_mask = np.clip((grad_mag - 4.0) / 14.0, 0.0, 1.0)
+
+    if is_color:
+        text_mask = text_mask[:, :, np.newaxis]
+    elif denoised.ndim == 3:
+        text_mask = text_mask[:, :, np.newaxis]
+
+    detail = image.astype(np.float32) - denoised.astype(np.float32)
+    clamped_detail = np.clip(detail, -7.0, 7.0)
+    blended = np.clip(
+        denoised.astype(np.float32) + texture_weight * text_mask * clamped_detail, 0, 255
+    ).astype(np.uint8)
+    return blended
+
+
 def adaptive_denoise_image(
     image: np.ndarray,
     noise_score: Optional[float] = None,
@@ -258,9 +302,9 @@ def adaptive_denoise_image(
 
     # 4. Detail-Preserving High-Frequency Residual Blending (Anti-Smoothing)
     if preserve_texture and texture_weight > 0.0:
-        detail = image.astype(np.float32) - denoised.astype(np.float32)
-        clamped_detail = np.clip(detail, -7.0, 7.0)
-        denoised = np.clip(denoised.astype(np.float32) + texture_weight * clamped_detail, 0, 255).astype(np.uint8)
+        denoised = _apply_texture_guided_residual(
+            image, denoised, is_color=is_color, texture_weight=texture_weight
+        )
 
     return denoised, selected_params
 
@@ -350,8 +394,8 @@ def denoise_image(
             denoised = denoised[:, :, np.newaxis]
 
     if preserve_texture and texture_weight > 0.0:
-        detail = image.astype(np.float32) - denoised.astype(np.float32)
-        clamped_detail = np.clip(detail, -7.0, 7.0)
-        denoised = np.clip(denoised.astype(np.float32) + texture_weight * clamped_detail, 0, 255).astype(np.uint8)
+        denoised = _apply_texture_guided_residual(
+            image, denoised, is_color=is_color, texture_weight=texture_weight
+        )
 
     return denoised

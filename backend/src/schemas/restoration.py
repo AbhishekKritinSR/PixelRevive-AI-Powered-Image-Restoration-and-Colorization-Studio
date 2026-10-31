@@ -4,6 +4,7 @@ Purpose:
 Defines Pydantic request and response schemas for single-image restoration operations.
 """
 
+from typing import Dict, Optional
 from pydantic import BaseModel, Field
 
 from .metrics import QualityMetricsResponse
@@ -76,6 +77,10 @@ class SingleRestorationResponse(BaseModel):
     options_applied: RestorationOptions = Field(description="Summary of restoration toggles applied")
     metrics: QualityMetricsResponse = Field(description="Image evaluation metrics and before/after deltas")
     image_base64: str = Field(description="Result image encoded as a Base64 PNG data URI")
+    operations_summary: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Transparent summary of operations executed or intelligently bypassed"
+    )
 
 
 class DamageMaskResponse(BaseModel):
@@ -86,6 +91,8 @@ class DamageMaskResponse(BaseModel):
     detected_components: int = Field(description="Number of detected scratch components")
     repaired_pixels: int = Field(description="Total scratch pixel count in mask")
     coverage_percentage: float = Field(description="Fraction of image area covered by defects (%)")
+    confidence_score: float = Field(default=0.0, description="Mean ridge profile flanking confidence score [0.0, 1.0]")
+    dispatch_reason: Optional[str] = Field(default=None, description="Adaptive engine selection reason")
     mask_base64: str = Field(description="Binary defect mask encoded as Base64 PNG data URI")
     overlay_base64: str = Field(description="Semi-transparent visual defect overlay encoded as Base64 PNG data URI")
     elapsed_seconds: float = Field(description="Detection latency in seconds")

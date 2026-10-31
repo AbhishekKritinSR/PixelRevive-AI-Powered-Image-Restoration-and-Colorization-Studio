@@ -9,6 +9,7 @@ interface QualityMetricsPanelProps {
   processedWidth: number;
   processedHeight: number;
   wasResized: boolean;
+  operationsSummary?: Record<string, string>;
 }
 
 export const QualityMetricsPanel: React.FC<QualityMetricsPanelProps> = ({
@@ -18,6 +19,7 @@ export const QualityMetricsPanel: React.FC<QualityMetricsPanelProps> = ({
   processedWidth,
   processedHeight,
   wasResized,
+  operationsSummary,
 }) => {
   const formatDelta = (delta: number) => {
     if (delta > 0) return `+${delta.toFixed(2)}`;
@@ -96,6 +98,68 @@ export const QualityMetricsPanel: React.FC<QualityMetricsPanelProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Adaptive Pipeline Execution & Protection Log */}
+      {operationsSummary && Object.keys(operationsSummary).length > 0 && (
+        <div
+          style={{
+            marginTop: "1rem",
+            paddingTop: "0.85rem",
+            borderTop: "1px solid var(--border-color)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              color: "var(--text-secondary)",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Adaptive Pipeline Execution & Quality Safeguard Log:
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+            {Object.entries(operationsSummary).map(([stage, explanation]) => {
+              const isBypassed =
+                explanation.toLowerCase().startsWith("bypassed") ||
+                explanation.toLowerCase().startsWith("skipped");
+              return (
+                <div
+                  key={stage}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.5rem",
+                    fontSize: "0.8rem",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <span
+                    className={`badge ${isBypassed ? "badge-outline" : "badge-success"}`}
+                    style={{
+                      minWidth: "95px",
+                      textTransform: "capitalize",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {stage.replace("_", " ")}
+                  </span>
+                  <span
+                    style={{
+                      color: isBypassed
+                        ? "var(--text-secondary)"
+                        : "var(--text-primary)",
+                    }}
+                  >
+                    {explanation}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

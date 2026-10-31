@@ -27,7 +27,17 @@ FACE_CASCADE_PATH = Path("model") / "haarcascade_frontalface_default.xml"
 
 
 class FaceRestorer:
-    """Provides localized, identity-preserving facial restoration for historical portraits."""
+    """Provides localized, identity-preserving facial restoration for historical portraits.
+
+    Methodological Note:
+        Haar Cascade is utilized strictly as a bounding-box face-region detector
+        (not a facial landmark regressor or generative reconstructor). Facial
+        enhancement is performed via deterministic, noise-safe localized spatial
+        domain filtering (bilateral noise suppression, CLAHE micro-contrast,
+        and unsharp masking in CIELAB space) blended via feathered elliptical
+        alpha masks. This strictly preserves genuine historical facial identity
+        without hallucinating synthetic facial structures or causing plastic artifacts.
+    """
 
     _cascade: Optional[cv2.CascadeClassifier] = None
 
@@ -109,11 +119,16 @@ class FaceRestorer:
             roi_lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
             L, A, B = cv2.split(roi_lab)
 
-            # 2. Localized adaptive contrast enhancement on face (CLAHE with subtle clip limit)
-            clahe = cv2.createCLAHE(clipLimit=1.8, tileGridSize=(4, 4))
-            L_enhanced = clahe.apply(L)
+            # 2. Noise-Safe Bilateral Pre-Smoothing:
+            # Prevents noise grain amplification on flat skin regions (cheeks, forehead)
+            # while strictly preserving high-gradient anatomical edges (eyes, nose, mouth).
+            L_smooth = cv2.bilateralFilter(L, d=5, sigmaColor=15.0, sigmaSpace=5.0)
 
-            # 3. Unsharp masking to recover eye, eyebrow, and lip contours without distortion
+            # 3. Localized adaptive contrast enhancement on face (CLAHE with subtle clip limit)
+            clahe = cv2.createCLAHE(clipLimit=1.8, tileGridSize=(4, 4))
+            L_enhanced = clahe.apply(L_smooth)
+
+            # 4. Unsharp masking to recover eye, eyebrow, and lip contours without distortion
             L_blur = cv2.GaussianBlur(L_enhanced, (0, 0), sigmaX=1.5)
             L_sharp = cv2.addWeighted(L_enhanced, 1.3, L_blur, -0.3, 0)
             L_sharp = np.clip(L_sharp, 0, 255).astype(np.uint8)

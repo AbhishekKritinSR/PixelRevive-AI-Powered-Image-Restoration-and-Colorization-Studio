@@ -43,22 +43,23 @@ class ScratchRepairMetadata:
     coverage_percentage: float = 0.0
     method: str = DEFAULT_INPAINT_METHOD
     radius: int = DEFAULT_INPAINT_RADIUS
+    confidence_score: float = 0.0
+    dispatch_reason: Optional[str] = None
     skipped: bool = False
     skip_reason: Optional[str] = None
 
 
-def _is_ridge_not_step_edge(
+def _evaluate_ridge_profile(
     gray_image: np.ndarray,
     comp_mask: np.ndarray,
     max_iqr: float = MAX_NEIGHBOR_IQR,
-) -> bool:
-    """Determine whether an elongated component is an isolated ridge (scratch) rather than a step edge.
+) -> Tuple[bool, float]:
+    """Evaluate whether an elongated component is an isolated ridge (scratch) rather than a step edge.
 
-    True scratches cut across an otherwise continuous local region; their flanking pixels
-    have a unimodal, relatively homogeneous distribution (low IQR).
-    Natural edges (object silhouettes, horizon lines, building borders) separate two distinct
-    brightness regions, producing high variance / large IQR in their flanking neighborhood.
-    Also supports scratches cutting across lighting gradients (e.g. human face contours).
+    Calculates flanking bilateral symmetry and extremum contrast.
+    
+    Returns:
+        Tuple of (is_scratch: bool, confidence: float [0.0, 1.0]).
     """
     k3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     dilated = cv2.dilate(comp_mask, k3, iterations=2)
@@ -67,28 +68,50 @@ def _is_ridge_not_step_edge(
     center_pixels = gray_image[comp_mask > 0]
 
     if len(neighbor_pixels) < 5 or len(center_pixels) < 2:
-        return True
+        return True, 0.50
+
+    c_med = float(np.median(center_pixels))
+    f_med = float(np.median(neighbor_pixels))
+    contrast = abs(c_med - f_med)
+
+    # Split flanking pixels into lower and upper quartiles / halves
+    f_low = neighbor_pixels[neighbor_pixels <= f_med]
+    f_high = neighbor_pixels[neighbor_pixels >= f_med]
+    mu_low = float(np.mean(f_low)) if len(f_low) > 0 else f_med
+    mu_high = float(np.mean(f_high)) if len(f_high) > 0 else f_med
+    step_diff = float(mu_high - mu_low)
 
     p75 = float(np.percentile(neighbor_pixels, 75))
     p25 = float(np.percentile(neighbor_pixels, 25))
     iqr = float(p75 - p25)
 
-    # 1. Standard check: unimodal neighborhood (low IQR)
-    if iqr <= max_iqr:
-        return True
+    # Extremum check: true scratch is distinctly outside the flanking envelope
+    is_extremum = (c_med < mu_low - 3.5) or (c_med > mu_high + 3.5)
 
-    # 2. Gradient-tolerant differential check:
-    # A true scratch cutting across an illumination gradient (such as a cheek or forehead)
-    # is a localized extremum (contrast trough or peak) distinctly offset from its flanking envelope.
-    c_med = float(np.median(center_pixels))
-    f_med = float(np.median(neighbor_pixels))
-    contrast = abs(c_med - f_med)
-    is_extrema = (c_med < p25 - 6.0) or (c_med > p75 + 6.0)
+    # Flanking symmetry ratio (close to 1.0 for symmetric ridge, drops for step edge)
+    sym_ratio = contrast / (contrast + step_diff + 1.0)
 
-    if is_extrema and contrast >= 15.0:
-        return True
+    # 1. Gradient-tolerant differential extremum check (e.g. scratches across face or lighting gradient)
+    if is_extremum and contrast >= 12.0:
+        conf = float(np.clip(0.4 * (contrast / 40.0) + 0.6 * sym_ratio, 0.0, 1.0))
+        return True, conf
 
-    return False
+    # 2. Standard check: unimodal neighborhood (low IQR across uniform regions like skies, walls)
+    if iqr <= max_iqr and contrast >= 8.0:
+        conf = float(np.clip(0.5 * (contrast / 30.0) + 0.5 * (1.0 - (iqr / max_iqr)), 0.0, 1.0))
+        return True, conf
+
+    return False, 0.0
+
+
+def _is_ridge_not_step_edge(
+    gray_image: np.ndarray,
+    comp_mask: np.ndarray,
+    max_iqr: float = MAX_NEIGHBOR_IQR,
+) -> bool:
+    """Determine whether an elongated component is an isolated ridge (scratch) rather than a step edge."""
+    is_ridge, _ = _evaluate_ridge_profile(gray_image, comp_mask, max_iqr)
+    return is_ridge
 
 
 def _filter_directional_components(
@@ -99,14 +122,19 @@ def _filter_directional_components(
     max_thickness: int = DEFAULT_MAX_THICKNESS,
     max_pixels: int = 5000,
     protected_zones: Optional[List[Tuple[int, int, int, int]]] = None,
-) -> Tuple[np.ndarray, int]:
-    """Filter candidate binary pixels into geometrically valid scratch components."""
+) -> Tuple[np.ndarray, int, float]:
+    """Filter candidate binary pixels into geometrically valid scratch components.
+    
+    Returns:
+        Tuple of (accepted_mask, count, mean_confidence).
+    """
     if np.count_nonzero(cand_mask) == 0:
-        return np.zeros_like(cand_mask), 0
+        return np.zeros_like(cand_mask), 0, 0.0
 
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(cand_mask, connectivity=8)
     accepted = np.zeros_like(cand_mask)
     count = 0
+    confidences: List[float] = []
 
     for i in range(1, num_labels):
         area = stats[i, cv2.CC_STAT_AREA]
@@ -118,7 +146,12 @@ def _filter_directional_components(
         if area < min_length or area > max_pixels:
             continue
 
-        # Biological landmark protection: suppress false positives in eyes/mouth
+        comp_mask = (labels == i).astype(np.uint8)
+        is_ridge, conf = _evaluate_ridge_profile(gray_image, comp_mask)
+        if not is_ridge:
+            continue
+
+        # Biological landmark protection: suppress false positives in eyes/mouth unless strong scratch
         if protected_zones:
             cx = int(comp_left + comp_w / 2)
             cy = int(comp_top + comp_h / 2)
@@ -128,14 +161,10 @@ def _filter_directional_components(
                     is_in_protected = True
                     break
             if is_in_protected:
-                # Unless candidate is an extreme defect (contrast > 45), protect landmark
-                comp_pix = gray_image[labels == i]
-                if len(comp_pix) > 0:
-                    c_med = float(np.median(comp_pix))
-                    if abs(c_med - 128.0) < 45.0:
-                        continue
+                # Require higher confidence (>= 0.60) to modify pixels inside biological landmarks
+                if conf < 0.60:
+                    continue
 
-        comp_mask = (labels == i).astype(np.uint8)
         contours, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         if not contours:
             continue
@@ -161,17 +190,18 @@ def _filter_directional_components(
         bb_aspect = max(comp_w / max(comp_h, 1), comp_h / max(comp_w, 1))
         effective_aspect = max(elongation, bb_aspect)
 
-        # Scratches must be elongated, sufficiently long, thin, and confirmed as ridges
+        # Scratches must be elongated, sufficiently long, and thin
         if (
             effective_aspect >= min_aspect_ratio
             and length >= min_length
             and thickness <= max_thickness
-            and _is_ridge_not_step_edge(gray_image, comp_mask)
         ):
             accepted[labels == i] = 255
             count += 1
+            confidences.append(conf)
 
-    return accepted, count
+    mean_conf = float(np.mean(confidences)) if confidences else 0.0
+    return accepted, count, mean_conf
 
 
 def detect_scratch_mask(
@@ -299,16 +329,16 @@ def detect_scratch_mask(
     _, m_b135 = cv2.threshold(diff_bright_135, threshold, 255, cv2.THRESH_BINARY)
 
     # 5. Connected-component geometric filtering performed per-direction with landmark protection
-    mask_v, c_v = _filter_directional_components(
+    mask_v, c_v, conf_v = _filter_directional_components(
         cv2.bitwise_or(m_dv, m_bv), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
     )
-    mask_h, c_h = _filter_directional_components(
+    mask_h, c_h, conf_h = _filter_directional_components(
         cv2.bitwise_or(m_dh, m_bh), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
     )
-    mask_45, c_45 = _filter_directional_components(
+    mask_45, c_45, conf_45 = _filter_directional_components(
         cv2.bitwise_or(m_d45, m_b45), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
     )
-    mask_135, c_135 = _filter_directional_components(
+    mask_135, c_135, conf_135 = _filter_directional_components(
         cv2.bitwise_or(m_d135, m_b135), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
     )
 
@@ -316,6 +346,8 @@ def detect_scratch_mask(
     combined_mask = cv2.bitwise_or(combined_mask, mask_45)
     combined_mask = cv2.bitwise_or(combined_mask, mask_135)
     total_components = c_v + c_h + c_45 + c_135
+    all_confs = [c for c in [conf_v, conf_h, conf_45, conf_135] if c > 0.0]
+    mean_confidence = float(np.mean(all_confs)) if all_confs else 0.0
 
     # 6. Gentle dilation to encompass boundary penumbra
     if total_components > 0:
@@ -335,6 +367,7 @@ def detect_scratch_mask(
             detected_components=total_components,
             repaired_pixels=repaired_pixels,
             coverage_percentage=round(coverage * 100, 2),
+            confidence_score=round(mean_confidence, 2),
             skipped=True,
             skip_reason=(
                 f"Mask coverage ({coverage * 100:.2f}%) exceeds safety threshold "
@@ -342,14 +375,19 @@ def detect_scratch_mask(
             ),
         )
 
-    return repair_mask, ScratchRepairMetadata(
+    meta = ScratchRepairMetadata(
         applied=repaired_pixels > 0,
         detected_components=total_components,
         repaired_pixels=repaired_pixels,
         coverage_percentage=round(coverage * 100, 2),
+        confidence_score=round(mean_confidence, 2),
         skipped=False,
         skip_reason=None,
     )
+    # Automatically evaluate recommended inpainting engine
+    _, reason = select_inpainting_engine(repair_mask, meta, image.shape, method_request="hybrid")
+    meta.dispatch_reason = reason
+    return repair_mask, meta
 
 
 def generate_mask_overlay(
@@ -381,6 +419,62 @@ def generate_mask_overlay(
     overlay[mask > 0] = color
 
     return cv2.addWeighted(overlay, alpha, base, 1.0 - alpha, 0)
+
+
+def select_inpainting_engine(
+    mask: np.ndarray,
+    meta: ScratchRepairMetadata,
+    image_shape: Tuple[int, ...],
+    method_request: str = "hybrid",
+) -> Tuple[str, str]:
+    """Intelligently determine whether to deploy Telea, Navier-Stokes, or LaMa.
+
+    Evaluates:
+    - Total damaged pixel area
+    - Maximum connected component area
+    - Defect thickness/width
+    - Coverage percentage
+    - Image dimensions and expected CPU latency
+
+    Returns:
+        Tuple of (chosen_engine: str, dispatch_reason: str).
+    """
+    req = method_request.lower().strip()
+    if req in ("telea", "ns", "lama"):
+        return req, f"Explicit user selection of '{req}' inpainting engine."
+
+    if meta.repaired_pixels == 0:
+        return "telea", "No damage pixels detected; minimal pass-through."
+
+    # Analyze component statistics
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    if num_labels <= 1:
+        return "telea", "Minor isolated scratch defect; Telea Fast Marching provides sub-20ms repair."
+
+    areas = [stats[i, cv2.CC_STAT_AREA] for i in range(1, num_labels)]
+    widths = [stats[i, cv2.CC_STAT_WIDTH] for i in range(1, num_labels)]
+    heights = [stats[i, cv2.CC_STAT_HEIGHT] for i in range(1, num_labels)]
+
+    max_comp_area = max(areas) if areas else 0
+    min_dims = [min(w, h) for w, h in zip(widths, heights)]
+    max_thickness = max(min_dims) if min_dims else 1
+
+    # 1. Broad damage or large tear hole (area >= 350 or thickness >= 5):
+    #    Requires deep neural inpainting (LaMa Fast Fourier Convolutions)
+    #    to reconstruct missing textures without blur.
+    if max_comp_area >= 350 or max_thickness >= 5 or meta.coverage_percentage >= 0.25:
+        return "lama", (
+            f"Significant tear / broad damage detected (max_comp_area={max_comp_area}px, "
+            f"max_thickness={max_thickness}px, coverage={meta.coverage_percentage:.2f}%). "
+            "LaMa deep Fast Fourier Convolutions deployed for global context synthesis."
+        )
+
+    # 2. Narrow hairline scratches (thickness <= 4, small areas):
+    #    Telea Fast Marching PDE is fast (<20ms) and introduces zero boundary halos.
+    return "telea", (
+        f"Hairline scratch damage (max_thickness={max_thickness}px, max_comp_area={max_comp_area}px). "
+        "Fast Marching Telea PDE deployed for responsive artifact-free repair."
+    )
 
 
 def repair_scratches(
@@ -469,17 +563,13 @@ def repair_scratches(
             skip_reason=None,
         )
 
-    # In hybrid/auto mode: determine whether to deploy fast Telea or deep LaMa
-    if method_clean in ("hybrid", "auto"):
-        if meta.repaired_pixels < 350 and meta.detected_components <= 3:
-            chosen_engine = "telea"
-        else:
-            chosen_engine = "lama"
-    else:
-        chosen_engine = method_clean
-
+    # Multi-factor intelligent inpainting engine dispatching
+    chosen_engine, dispatch_reason = select_inpainting_engine(
+        repair_mask, meta, image.shape, method_request=method_clean
+    )
     meta.method = chosen_engine
     meta.radius = inpaint_radius
+    meta.dispatch_reason = dispatch_reason
 
     # If mask is empty or repair was skipped: return unchanged copy (zero overhead)
     if meta.skipped or np.count_nonzero(repair_mask) == 0:

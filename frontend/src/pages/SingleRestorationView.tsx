@@ -198,6 +198,11 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
                   <span className="badge badge-accent" style={{ fontSize: "0.6875rem" }}>
                     {damageMaskResult.detected_components} defect(s) ({damageMaskResult.coverage_percentage}% area)
                   </span>
+                  {damageMaskResult.confidence_score !== undefined && damageMaskResult.confidence_score > 0 && (
+                    <span className="badge badge-outline" style={{ fontSize: "0.6875rem" }} title="Mean flanking bilateral ridge profile confidence">
+                      Conf: {(damageMaskResult.confidence_score * 100).toFixed(0)}%
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
                   <button
@@ -233,10 +238,15 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
                   alt="Detected Scratch Damage"
                   style={{ maxHeight: "300px", maxWidth: "100%", objectFit: "contain", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-subtle)" }}
                 />
-                <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)", marginTop: "0.5rem" }}>
+                <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)", marginTop: "0.5rem", textAlign: "center" }}>
                   {maskViewMode === "overlay"
                     ? "Red highlights indicate detected linear scratches & surface abrasions with biological landmark protection."
                     : "Binary morphological mask used to target LaMa neural Fast Fourier Convolution or Telea inpainting."}
+                  {damageMaskResult.dispatch_reason && (
+                    <div style={{ marginTop: "0.25rem", color: "var(--accent-primary)", fontWeight: 500 }}>
+                      Recommendation: {damageMaskResult.dispatch_reason}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -365,6 +375,7 @@ export const SingleRestorationView: React.FC<SingleRestorationViewProps> = ({ is
                 processedWidth={result.processed_width}
                 processedHeight={result.processed_height}
                 wasResized={result.was_resized}
+                operationsSummary={result.operations_summary}
               />
 
               {/* Phase 5.6 Advanced Image Quality Assessment Dashboard */}

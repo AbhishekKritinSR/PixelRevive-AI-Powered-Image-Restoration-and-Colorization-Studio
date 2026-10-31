@@ -82,6 +82,7 @@ export interface SingleRestorationResponse {
   options_applied: RestorationOptions;
   metrics: QualityMetricsResponse;
   image_base64: string;
+  operations_summary?: Record<string, string>;
 }
 
 export interface BatchItemResult {
@@ -184,6 +185,8 @@ export interface DamageMaskResponse {
   detected_components: number;
   repaired_pixels: number;
   coverage_percentage: number;
+  confidence_score?: number;
+  dispatch_reason?: string | null;
   mask_base64: string;
   overlay_base64: string;
   elapsed_seconds: number;

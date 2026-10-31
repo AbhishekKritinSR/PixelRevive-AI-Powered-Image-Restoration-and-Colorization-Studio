@@ -172,7 +172,7 @@ class RestorationService:
         bgr = cv2.cvtColor(processed_input_rgb, cv2.COLOR_RGB2BGR)
 
         # 4. Classical restoration stages (repair, denoise, contrast, sharpen, face_restore)
-        enhanced_bgr = enhance_image(
+        enhanced_bgr, operations_summary = enhance_image(
             bgr,
             denoise=options.denoise,
             contrast=options.contrast,
@@ -182,9 +182,10 @@ class RestorationService:
             inpaint_method=getattr(options, "inpaint_method", "lama"),
             face_restore=getattr(options, "face_restore", False),
             sr_model=getattr(options, "sr_model", "fsrcnn"),
+            return_summary=True,
         )
 
-        # 5. AI Colorization stage
+        # 5. AI Colorization stage (with clean image protection against overwriting natural color)
         if options.colorize:
             # Validate colorization model identifier
             model_name = (options.colorization_model or "zhang_caffe").strip()
@@ -198,32 +199,56 @@ class RestorationService:
             # Validate render_factor range
             validate_render_factor(options.render_factor)
 
+            # Verify model availability
             colorizer = self.model_service.get_colorizer(model_name)
 
-            # Prepare optional tuning parameters (saturation, temperature)
-            color_kwargs = {}
-            if hasattr(options, "color_saturation"):
-                color_kwargs["saturation"] = options.color_saturation
-            if hasattr(options, "color_temperature"):
-                color_kwargs["color_temperature"] = options.color_temperature
-
-            # Pass render_factor and tuning options if supported
-            import inspect
-
-            sig = inspect.signature(colorizer.colorize)
-            if "render_factor" in sig.parameters or any(
-                p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
-            ):
-                colorized_float = colorizer.colorize(
-                    enhanced_bgr,
-                    render_factor=options.render_factor,
-                    **color_kwargs,
+            # Check if input is already an authentic color photograph (Clean Color Protection)
+            rgb_f = processed_input_rgb.astype(np.float32)
+            color_var = float(
+                np.mean(
+                    (
+                        np.abs(rgb_f[:, :, 0] - rgb_f[:, :, 1])
+                        + np.abs(rgb_f[:, :, 1] - rgb_f[:, :, 2])
+                        + np.abs(rgb_f[:, :, 2] - rgb_f[:, :, 0])
+                    )
+                    / 3.0
                 )
-            else:
-                colorized_float = colorizer.colorize(enhanced_bgr, **color_kwargs)
+            )
 
-            # Convert float32 [0.0, 1.0] -> uint8 [0, 255]
-            colorized_bgr = (colorized_float * 255.0).astype(np.uint8)
+            if color_var >= 6.0:
+                operations_summary["colorization"] = (
+                    f"Bypassed: input is already a natural color photograph "
+                    f"(chromatic variance={color_var:.1f} >= 6.0). Authentic colors preserved."
+                )
+                colorized_bgr = enhanced_bgr
+            else:
+                # Prepare optional tuning parameters (saturation, temperature)
+                color_kwargs = {}
+                if hasattr(options, "color_saturation"):
+                    color_kwargs["saturation"] = options.color_saturation
+                if hasattr(options, "color_temperature"):
+                    color_kwargs["color_temperature"] = options.color_temperature
+
+                # Pass render_factor and tuning options if supported
+                import inspect
+
+                sig = inspect.signature(colorizer.colorize)
+                if "render_factor" in sig.parameters or any(
+                    p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+                ):
+                    colorized_float = colorizer.colorize(
+                        enhanced_bgr,
+                        render_factor=options.render_factor,
+                        **color_kwargs,
+                    )
+                else:
+                    colorized_float = colorizer.colorize(enhanced_bgr, **color_kwargs)
+
+                # Convert float32 [0.0, 1.0] -> uint8 [0, 255]
+                colorized_bgr = (colorized_float * 255.0).astype(np.uint8)
+                operations_summary["colorization"] = (
+                    f"Applied: deep neural colorization using {model_name} with guided chrominance refinement."
+                )
         else:
             colorized_bgr = enhanced_bgr
 
@@ -276,6 +301,7 @@ class RestorationService:
             options_applied=options,
             metrics=metrics,
             image_base64=base64_uri,
+            operations_summary=operations_summary,
         )
 
         return response, png_bytes
@@ -313,6 +339,8 @@ class RestorationService:
             detected_components=meta.detected_components,
             repaired_pixels=meta.repaired_pixels,
             coverage_percentage=meta.coverage_percentage,
+            confidence_score=round(meta.confidence_score, 2),
+            dispatch_reason=meta.dispatch_reason,
             mask_base64=mask_base64,
             overlay_base64=overlay_base64,
             elapsed_seconds=round(elapsed, 3),

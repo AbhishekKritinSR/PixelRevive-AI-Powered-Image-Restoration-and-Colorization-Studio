@@ -32,6 +32,8 @@ This module does not:
 - Modify pipeline order dynamically.
 """
 
+from typing import Dict, Tuple, Union
+
 import numpy as np
 
 from .contrast import enhance_contrast
@@ -55,7 +57,8 @@ def enhance_image(
     face_restore: bool = False,
     sr_model: str = "fsrcnn",
     preserve_texture: bool = True,
-) -> np.ndarray:
+    return_summary: bool = False,
+) -> Union[np.ndarray, Tuple[np.ndarray, Dict[str, str]]]:
     """Run the classical restoration pipeline on a BGR uint8 image.
 
     The stages execute in sequence:
@@ -102,27 +105,74 @@ def enhance_image(
         Restored BGR image as a uint8 NumPy array.
     """
     result = image
+    summary: Dict[str, str] = {}
 
     if repair:
-        result, _ = repair_scratches(result, method=inpaint_method)
+        repaired, repair_meta = repair_scratches(result, method=inpaint_method)
+        if repair_meta.applied and repair_meta.repaired_pixels > 0:
+            result = repaired
+            summary["scratch_repair"] = (
+                f"Applied: {repair_meta.repaired_pixels} damaged pixels reconstructed "
+                f"({repair_meta.coverage_percentage}%) using {repair_meta.method.upper()}."
+            )
+        else:
+            summary["scratch_repair"] = (
+                "Bypassed: no significant scratch or surface defects detected."
+            )
 
     if denoise:
         if adaptive_denoise:
-            result, _ = adaptive_denoise_image(result, preserve_texture=preserve_texture)
+            denoised, denoise_params = adaptive_denoise_image(
+                result, preserve_texture=preserve_texture
+            )
+            if denoise_params.skip:
+                summary["denoising"] = (
+                    f"Bypassed: measured noise variance is pristine "
+                    f"(sigma={denoise_params.noise_score:.2f} < 1.5). Filtering skipped to preserve photographic clarity."
+                )
+            else:
+                result = denoised
+                summary["denoising"] = (
+                    f"Applied: adaptive Non-Local Means (sigma={denoise_params.noise_score:.2f}, "
+                    f"level={denoise_params.noise_level}, h={denoise_params.h}) with texture-guided residual blending."
+                )
         else:
             result = denoise_image(result, preserve_texture=preserve_texture)
+            summary["denoising"] = (
+                "Applied: standard Non-Local Means filtering with texture-guided residual blending."
+            )
 
     if contrast:
         result = enhance_contrast(result)
+        summary["contrast"] = (
+            "Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel."
+        )
 
     if face_restore:
-        result, _ = FaceRestorer.restore_faces(result)
+        restored, face_count = FaceRestorer.restore_faces(result)
+        if face_count > 0:
+            result = restored
+            summary["face_enhancement"] = (
+                f"Applied: noise-safe localized spatial enhancement on {face_count} detected face(s)."
+            )
+        else:
+            summary["face_enhancement"] = (
+                "Bypassed: no frontal faces detected in image canvas."
+            )
 
     if sharpen:
         result = sharpen_image(result)
+        summary["sharpening"] = (
+            "Applied: unity-gain high-pass Laplacian sharpening for edge recovery."
+        )
 
     if upscale:
         result, _ = upscale_image(result, scale=scale, model=sr_model)
+        summary["super_resolution"] = (
+            f"Applied: {scale}x AI super-resolution using {sr_model.upper()}."
+        )
 
+    if return_summary:
+        return result, summary
     return result
 
