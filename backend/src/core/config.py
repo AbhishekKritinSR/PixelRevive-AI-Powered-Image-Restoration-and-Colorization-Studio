@@ -20,8 +20,12 @@ from pathlib import Path
 from typing import List, Set
 
 from src.config import (
+    FSRCNN_X2_PATH,
+    FSRCNN_X4_PATH,
     MAX_BATCH_FILES,
     MAX_IMAGE_DIMENSION,
+    MAX_SUPER_RES_OUTPUT_DIMENSION,
+    MAX_SUPER_RES_OUTPUT_PIXELS,
     MODEL_DIR,
     MODEL_PATH,
     POINTS_PATH,
@@ -62,6 +66,8 @@ class Settings:
     # Image Processing Limits (from src.config)
     MAX_IMAGE_DIMENSION: int = MAX_IMAGE_DIMENSION  # 1600px cap
     MAX_BATCH_FILES: int = MAX_BATCH_FILES          # 10 images cap
+    MAX_SUPER_RES_OUTPUT_DIMENSION: int = MAX_SUPER_RES_OUTPUT_DIMENSION  # 4096px cap
+    MAX_SUPER_RES_OUTPUT_PIXELS: int = MAX_SUPER_RES_OUTPUT_PIXELS        # 12 MP budget
 
     # Model Storage Paths (from src.config)
     PROJECT_ROOT: Path = PROJECT_ROOT
@@ -69,6 +75,8 @@ class Settings:
     PROTOTXT_PATH: Path = PROTOTXT_PATH
     MODEL_PATH: Path = MODEL_PATH
     POINTS_PATH: Path = POINTS_PATH
+    FSRCNN_X2_PATH: Path = FSRCNN_X2_PATH
+    FSRCNN_X4_PATH: Path = FSRCNN_X4_PATH
 
 
 # Global settings singleton

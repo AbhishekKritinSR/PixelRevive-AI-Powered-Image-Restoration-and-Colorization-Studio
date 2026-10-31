@@ -39,6 +39,14 @@ def process_batch_images(
         default=False,
         description="Apply archival scratch detection and inpainting",
     ),
+    upscale: bool = Form(
+        default=False,
+        description="Apply AI super-resolution upscaling (2x or 4x)",
+    ),
+    scale: int = Form(
+        default=2,
+        description="Super-resolution scaling factor (2 or 4)",
+    ),
     batch_service: BatchService = Depends(get_batch_service),
 ) -> BatchRestorationResponse:
     """Process multiple photographs in a batch.
@@ -52,6 +60,8 @@ def process_batch_images(
         colorize=colorize,
         adaptive_denoise=adaptive_denoise,
         repair=repair,
+        upscale=upscale,
+        scale=scale,
     )
 
     files_data = [(f.filename or f"image_{idx}.png", f.file.read()) for idx, f in enumerate(files)]

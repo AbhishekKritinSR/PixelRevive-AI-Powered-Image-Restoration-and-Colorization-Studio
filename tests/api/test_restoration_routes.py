@@ -64,6 +64,60 @@ class TestRestorationEndpoints:
         assert json_data["options_applied"]["colorize"] is False
         assert json_data["options_applied"]["adaptive_denoise"] is True
         assert json_data["options_applied"]["repair"] is False
+        assert json_data["options_applied"]["upscale"] is False
+        assert json_data["options_applied"]["scale"] == 2
+
+    def test_process_single_image_super_resolution_2x(self, valid_png_bytes):
+        files = {"file": ("test_photo.png", valid_png_bytes, "image/png")}
+        data = {
+            "denoise": "false",
+            "contrast": "false",
+            "sharpen": "false",
+            "colorize": "false",
+            "repair": "false",
+            "upscale": "true",
+            "scale": "2",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 200
+        json_data = response.json()
+        assert json_data["options_applied"]["upscale"] is True
+        assert json_data["options_applied"]["scale"] == 2
+        # Original was 80x60 -> 2x should be 160x120
+        assert json_data["original_width"] == 80
+        assert json_data["original_height"] == 60
+        assert json_data["processed_width"] == 160
+        assert json_data["processed_height"] == 120
+
+    def test_process_single_image_super_resolution_4x(self, valid_png_bytes):
+        files = {"file": ("test_photo.png", valid_png_bytes, "image/png")}
+        data = {
+            "denoise": "false",
+            "contrast": "false",
+            "sharpen": "false",
+            "colorize": "false",
+            "repair": "false",
+            "upscale": "true",
+            "scale": "4",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 200
+        json_data = response.json()
+        assert json_data["options_applied"]["upscale"] is True
+        assert json_data["options_applied"]["scale"] == 4
+        # Original was 80x60 -> 4x should be 320x240
+        assert json_data["processed_width"] == 320
+        assert json_data["processed_height"] == 240
+
+    def test_process_single_image_unsupported_scale_raises_400(self, valid_png_bytes):
+        files = {"file": ("test_photo.png", valid_png_bytes, "image/png")}
+        data = {
+            "upscale": "true",
+            "scale": "3",
+        }
+        response = client.post("/api/v1/restoration/process", files=files, data=data)
+        assert response.status_code == 400
+        assert "Unsupported scaling factor" in response.json()["detail"]
 
     def test_process_single_image_repair_toggles(self, valid_png_bytes):
         # 1. Explicit repair=false

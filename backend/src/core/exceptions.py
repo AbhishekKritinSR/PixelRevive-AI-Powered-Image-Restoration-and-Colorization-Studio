@@ -44,6 +44,16 @@ class ModelUnavailableError(Exception):
     pass
 
 
+class UnsupportedScaleError(Exception):
+    """Raised when an unsupported super-resolution scaling factor is requested."""
+    pass
+
+
+class SuperResolutionResourceError(Exception):
+    """Raised when super-resolution output dimensions or memory exceed safety limits."""
+    pass
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register custom exception handlers on the FastAPI application instance.
 
@@ -84,6 +94,20 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def model_unavailable_handler(request: Request, exc: ModelUnavailableError):
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(UnsupportedScaleError)
+    async def unsupported_scale_handler(request: Request, exc: UnsupportedScaleError):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(SuperResolutionResourceError)
+    async def super_res_resource_handler(request: Request, exc: SuperResolutionResourceError):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},
         )
 

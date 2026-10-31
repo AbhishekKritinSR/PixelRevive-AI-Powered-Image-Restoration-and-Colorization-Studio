@@ -22,6 +22,13 @@ from .scratch_repair import (
     repair_scratches,
 )
 from .sharpener import sharpen_image
+from .super_resolution import (
+    SuperResolutionMetadata,
+    get_model_spec,
+    is_model_file_present,
+    is_model_loaded,
+    upscale_image,
+)
 
 __all__ = [
     "DenoiseParameters",
@@ -34,5 +41,10 @@ __all__ = [
     "ScratchRepairMetadata",
     "detect_scratch_mask",
     "repair_scratches",
+    "SuperResolutionMetadata",
+    "upscale_image",
+    "get_model_spec",
+    "is_model_file_present",
+    "is_model_loaded",
 ]
 

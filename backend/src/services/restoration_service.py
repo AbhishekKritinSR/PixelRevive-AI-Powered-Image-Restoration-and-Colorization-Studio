@@ -52,6 +52,7 @@ from backend.src.processing.evaluation.heuristics import (
     estimate_sharpness,
 )
 from backend.src.processing.restoration.restorer import enhance_image
+from backend.src.processing.restoration.super_resolution import upscale_image
 from backend.src.processing.utils.format_converter import image_to_base64_png
 from backend.src.processing.utils.geometry import resize_if_too_large
 from backend.src.schemas.metrics import QualityMetricsResponse
@@ -177,11 +178,17 @@ class RestorationService:
             colorizer = self.model_service.get_colorizer("zhang_caffe")
             colorized_float = colorizer.colorize(enhanced_bgr)
             # Convert float32 [0.0, 1.0] -> uint8 [0, 255]
-            result_bgr = (colorized_float * 255.0).astype(np.uint8)
+            colorized_bgr = (colorized_float * 255.0).astype(np.uint8)
         else:
-            result_bgr = enhanced_bgr
+            colorized_bgr = enhanced_bgr
 
-        # 6. Convert BGR -> RGB for display and output encoding
+        # 6. AI Super-Resolution stage (if enabled)
+        if options.upscale:
+            result_bgr, _ = upscale_image(colorized_bgr, scale=options.scale)
+        else:
+            result_bgr = colorized_bgr
+
+        # 7. Convert BGR -> RGB for display and output encoding
         result_rgb = cv2.cvtColor(result_bgr, cv2.COLOR_BGR2RGB)
         elapsed_seconds = time.perf_counter() - start_time
 

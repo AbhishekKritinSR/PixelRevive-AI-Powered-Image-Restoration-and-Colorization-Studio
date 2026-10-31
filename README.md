@@ -54,7 +54,8 @@ flowchart TD
 - **Production Validation**: Strict validation for image format (`.jpg`, `.jpeg`, `.png`, `.webp`), mime-type, 25 MB payload limit, and automatic aspect-preserving downscaling for images exceeding 1600px.
 - **Real-Time Quality Metrics**: Execution latency breakdown (ms), inference device detection (CPU/CUDA), and before/after heuristic contrast and sharpness deltas.
 - **Archival Scratch Repair & Inpainting**: Multi-orientation morphological detection (horizontal, vertical, diagonal) and OpenCV inpainting (`INPAINT_TELEA`) with safety coverage guards and ridge vs step-edge false-positive rejection.
-- **Exhaustive Automated Test Suite**: 165 automated unit, integration, and route validation tests with 100% pass rate.
+- **AI Super-Resolution**: Optional 2× and 4× image upscaling via OpenCV DNN Super Resolution using pre-trained FSRCNN models, protected by strict 4096px dimension and 12 MP memory safety budgets.
+- **Exhaustive Automated Test Suite**: 193 automated unit, integration, and route validation tests with 100% pass rate.
 
 ---
 
@@ -69,6 +70,7 @@ flowchart TD
 3. **LAB Color Space Isolation**: Separates lightness ($L \in [0, 100]$) from chromatic channels ($a, b$).
 4. **CNN Color Inference**: The lightness channel is scaled and fed into the 8-block convolutional architecture to predict chromatic distributions over 313 quantized bins.
 5. **Reconstruction**: Quantized bins are mapped back to continuous $a, b$ values, fused with the original enhanced $L$ channel, and transformed back to BGR/RGB for display and download.
+6. **AI Super-Resolution (Optional)**: When `upscale=true`, reconstructs high-frequency details at 2× or 4× resolution using OpenCV DNN Super Resolution and FSRCNN models. Enforces a 4096px maximum dimension and 12 MP pixel budget to safeguard CPU resources. Disabled by default (`upscale=false`).
 
 ---
 
@@ -146,11 +148,14 @@ pip install -r requirements.txt
 
 ### 2. Model Weights Setup
 
-The model architecture definition (`colorization_deploy_v2.prototxt`) and cluster centers (`pts_in_hull.npy`) are committed in `model/`.
+The model architecture definition (`colorization_deploy_v2.prototxt`), cluster centers (`pts_in_hull.npy`), and FSRCNN super-resolution models (`FSRCNN_x2.pb`, `FSRCNN_x4.pb`) are committed in `model/`.
 
-The pretrained Caffe weights (`colorization_release_v2.caffemodel`, ~123 MB) can be downloaded automatically on first inference, or manually placed in `model/`:
-- **Source**: [Zhang et al. Official Release](http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel)
-- **Destination Path**: `model/colorization_release_v2.caffemodel`
+- **Colorization Model**: Pretrained Caffe weights (`colorization_release_v2.caffemodel`, ~123 MB) can be downloaded automatically on first inference, or manually placed in `model/`:
+  - **Source**: [Zhang et al. Official Release](http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel)
+  - **Destination Path**: `model/colorization_release_v2.caffemodel`
+- **Super-Resolution Models**: FSRCNN 2× and 4× models (~40 KB each) in `model/`:
+  - **Source**: [Saafke/FSRCNN_Tensorflow](https://github.com/Saafke/FSRCNN_Tensorflow) (Apache-2.0 License)
+  - **Destination Paths**: `model/FSRCNN_x2.pb`, `model/FSRCNN_x4.pb`
 
 ### 3. Setup Frontend
 
@@ -193,7 +198,7 @@ npm run dev
 
 ## Testing & Quality Assurance
 
-### Backend Test Suite (165 Tests)
+### Backend Test Suite (193 Tests)
 
 Run all unit, pipeline, and API endpoint tests:
 
@@ -202,14 +207,18 @@ pytest -v
 
 # Run scratch repair test suite specifically:
 pytest tests/unit/test_scratch_repair.py -v
+
+# Run super-resolution test suite specifically:
+pytest tests/unit/test_super_resolution.py -v
 ```
 
 Test coverage includes:
+- FSRCNN super-resolution model registry, thread-safe model caching, 2× and 4× upscaling, and 4096px / 12 MP safety guardrails.
 - Archival scratch detection, directional morphology, ridge validation, and OpenCV inpainting (`INPAINT_TELEA` / `INPAINT_NS`).
 - Adaptive Non-Local Means denoising, noise variance heuristics, and texture preservation.
 - Classical enhancement filters (CLAHE contrast, Laplacian sharpening unity-gain invariant).
 - Colorization model loading, fallback handling, and output tensor contracts.
-- FastAPI REST endpoints: validation errors (400, 413, 422), health checks, model status, single and batch processing with `repair=true`/`repair=false`.
+- FastAPI REST endpoints: validation errors (400, 413, 422), health checks, model status, single and batch processing with `repair=true`/`repair=false` and `upscale=true`/`scale=2|4`.
 
 ### Frontend Type-Check & Build Verification
 
@@ -238,11 +247,19 @@ npm run build
 
 - **Source Code**: Licensed under the [MIT License](LICENSE).
 - **Pretrained Colorization Model**: Zhang, Isola, and Efros, *"Colorful Image Colorization"*, ECCV 2016 ([BSD-2-Clause](https://github.com/richzhang/colorization/blob/master/LICENSE)).
+- **Pretrained Super-Resolution Models**: Dong, Loy, and Tang, *"Accelerating the Very Deep Convolutional Networks for Practical Image Restoration"*, ECCV 2016. TensorFlow model port by [Saafke/FSRCNN_Tensorflow](https://github.com/Saafke/FSRCNN_Tensorflow) ([Apache-2.0](https://github.com/Saafke/FSRCNN_Tensorflow/blob/master/LICENSE)).
 
 ```bibtex
 @inproceedings{zhang2016colorful,
   title={Colorful Image Colorization},
   author={Zhang, Richard and Isola, Phillip and Efros, Alexei A},
+  booktitle={ECCV},
+  year={2016}
+}
+
+@inproceedings{dong2016accelerating,
+  title={Accelerating the Very Deep Convolutional Networks for Practical Image Restoration},
+  author={Dong, Chao and Loy, Chen Change and Tang, Xiaoou},
   booktitle={ECCV},
   year={2016}
 }

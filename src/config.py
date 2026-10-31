@@ -17,6 +17,8 @@ MODEL_DIR = PROJECT_ROOT / "model"
 PROTOTXT_PATH = MODEL_DIR / "colorization_deploy_v2.prototxt"
 MODEL_PATH = MODEL_DIR / "colorization_release_v2.caffemodel"
 POINTS_PATH = MODEL_DIR / "pts_in_hull.npy"
+FSRCNN_X2_PATH = MODEL_DIR / "FSRCNN_x2.pb"
+FSRCNN_X4_PATH = MODEL_DIR / "FSRCNN_x4.pb"
 
 # Official source (Richard Zhang / UC Berkeley), the same URL OpenCV's own
 # sample code and documentation point to. Plain HTTP because that's the
@@ -61,4 +63,11 @@ MAX_IMAGE_DIMENSION = 1600
 # Cap on how many images a single batch-processing run will accept, so a
 # large upload can't hold unbounded memory or run for an unbounded time.
 MAX_BATCH_FILES = 10
+
+# --- super-resolution limits ----------------------------------------------
+# Maximum output dimensions and pixel budget for AI super-resolution (2x/4x)
+# to protect CPU memory and prevent unbounded execution times.
+MAX_SUPER_RES_OUTPUT_DIMENSION = 4096
+MAX_SUPER_RES_OUTPUT_PIXELS = 12_000_000
+
 

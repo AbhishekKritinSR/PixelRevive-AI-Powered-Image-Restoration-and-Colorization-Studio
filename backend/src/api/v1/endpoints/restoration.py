@@ -39,6 +39,14 @@ def process_single_image(
         default=False,
         description="Apply archival scratch detection and inpainting",
     ),
+    upscale: bool = Form(
+        default=False,
+        description="Apply AI super-resolution upscaling (2x or 4x)",
+    ),
+    scale: int = Form(
+        default=2,
+        description="Super-resolution scaling factor (2 or 4)",
+    ),
     restoration_service: RestorationService = Depends(get_restoration_service),
 ) -> SingleRestorationResponse:
     """Restore and colorize an individual photograph.
@@ -55,6 +63,8 @@ def process_single_image(
         colorize=colorize,
         adaptive_denoise=adaptive_denoise,
         repair=repair,
+        upscale=upscale,
+        scale=scale,
     )
 
     response, _ = restoration_service.process_image(

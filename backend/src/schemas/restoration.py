@@ -24,6 +24,14 @@ class RestorationOptions(BaseModel):
         default=False,
         description="Enable archival scratch repair and inpainting",
     )
+    upscale: bool = Field(
+        default=False,
+        description="Enable AI super-resolution upscaling (2x or 4x)",
+    )
+    scale: int = Field(
+        default=2,
+        description="Super-resolution scaling factor (2 or 4)",
+    )
 
 
 class SingleRestorationResponse(BaseModel):

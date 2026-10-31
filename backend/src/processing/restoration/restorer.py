@@ -38,6 +38,7 @@ from .contrast import enhance_contrast
 from .denoiser import adaptive_denoise_image, denoise_image
 from .scratch_repair import repair_scratches
 from .sharpener import sharpen_image
+from .super_resolution import upscale_image
 
 
 def enhance_image(
@@ -47,6 +48,8 @@ def enhance_image(
     sharpen: bool = True,
     adaptive_denoise: bool = True,
     repair: bool = False,
+    upscale: bool = False,
+    scale: int = 2,
 ) -> np.ndarray:
     """Run the classical restoration pipeline on a BGR uint8 image.
 
@@ -55,6 +58,7 @@ def enhance_image(
         2. Denoise (smooths noise and inpainting boundaries, fixed or adaptive)
         3. Contrast (enhances local dynamic range on cleaned signal)
         4. Sharpen (restores micro-edge definition smoothed by denoising)
+        5. Super-Resolution (AI 2x or 4x upscaling via FSRCNN if enabled)
 
     Each stage can be independently enabled or disabled. Disabled stages
     are bypassed completely with zero computational overhead.
@@ -74,6 +78,11 @@ def enhance_image(
         repair:
             Whether to detect archival scratches and reconstruct them with OpenCV inpainting.
             Default is False (disabled by default for full backward compatibility).
+        upscale:
+            Whether to upscale the output using AI super-resolution (FSRCNN).
+            Default is False.
+        scale:
+            Super-resolution scale factor (2 or 4). Default is 2.
 
     Returns:
         Restored BGR image as a uint8 NumPy array.
@@ -94,6 +103,9 @@ def enhance_image(
 
     if sharpen:
         result = sharpen_image(result)
+
+    if upscale:
+        result, _ = upscale_image(result, scale=scale)
 
     return result
 

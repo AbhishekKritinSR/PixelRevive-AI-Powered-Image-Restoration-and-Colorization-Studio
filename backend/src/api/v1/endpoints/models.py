@@ -4,7 +4,9 @@ Purpose:
 Endpoint for querying AI colorization model file availability and readiness.
 """
 
-from fastapi import APIRouter, Depends
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
 
 from backend.src.api.dependencies import get_model_service
 from backend.src.schemas.common import ModelStatusResponse
@@ -17,11 +19,15 @@ router = APIRouter()
     "/models/status",
     response_model=ModelStatusResponse,
     summary="AI Model Readiness Status",
-    description="Check whether the Zhang Caffe colorization model files exist on disk and whether it is ready for inference.",
+    description="Check whether AI model files exist on disk and whether they are ready for inference.",
 )
 def get_model_status(
+    model_name: Optional[str] = Query(
+        default=None,
+        description="Model to inspect ('zhang_caffe', 'fsrcnn_x2', 'fsrcnn_x4'). Defaults to 'zhang_caffe'.",
+    ),
     model_service: ModelService = Depends(get_model_service),
 ) -> ModelStatusResponse:
     """Report model presence on disk, memory initialization state, and inference readiness."""
-    return model_service.get_model_status()
+    return model_service.get_model_status(model_name=model_name)
 
