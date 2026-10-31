@@ -13,6 +13,7 @@ from functools import lru_cache
 from backend.src.services.analysis_service import AnalysisService
 from backend.src.services.batch_service import BatchService
 from backend.src.services.model_service import ModelService
+from backend.src.services.quality_service import QualityService
 from backend.src.services.restoration_service import RestorationService
 
 
@@ -20,6 +21,12 @@ from backend.src.services.restoration_service import RestorationService
 def get_analysis_service() -> AnalysisService:
     """Return cached singleton instance of AnalysisService."""
     return AnalysisService()
+
+
+@lru_cache()
+def get_quality_service() -> QualityService:
+    """Return cached singleton instance of QualityService."""
+    return QualityService()
 
 
 @lru_cache()

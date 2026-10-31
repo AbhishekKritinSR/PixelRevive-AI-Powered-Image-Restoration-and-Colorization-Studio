@@ -226,3 +226,4 @@ class TestRealCaffeModelInference:
         res_20 = colorize_image(test_img, real_net, render_factor=20)
         assert res_20.shape == (48, 48, 3)
         assert not np.isnan(res_20).any()
+

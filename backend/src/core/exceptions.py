@@ -19,6 +19,11 @@ class ImageValidationError(Exception):
     pass
 
 
+class DimensionMismatchError(ImageValidationError):
+    """Raised when target and reference image dimensions do not match."""
+    pass
+
+
 class CorruptedImageError(ImageValidationError):
     """Raised when an uploaded file cannot be decoded as a valid image."""
     pass
@@ -71,6 +76,13 @@ def register_exception_handlers(app: FastAPI) -> None:
         app:
             The FastAPI application instance.
     """
+
+    @app.exception_handler(ImageValidationError)
+    async def image_validation_handler(request: Request, exc: ImageValidationError):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(exc)},
+        )
 
     @app.exception_handler(CorruptedImageError)
     async def corrupted_image_handler(request: Request, exc: CorruptedImageError):

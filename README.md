@@ -56,7 +56,8 @@ flowchart TD
 - **Archival Scratch Repair & Inpainting**: Multi-orientation morphological detection (horizontal, vertical, diagonal) and OpenCV inpainting (`INPAINT_TELEA`) with safety coverage guards and ridge vs step-edge false-positive rejection.
 - **AI Super-Resolution**: Optional 2× and 4× image upscaling via OpenCV DNN Super Resolution using pre-trained FSRCNN models, protected by strict 4096px dimension and 12 MP memory safety budgets.
 - **Colorization Tuning & Model Registry**: Configurable rendering factor ($10 \le \text{render\_factor} \le 40$, default 14) controlling internal network resolution, paired with an extensible, thread-safe `ColorizerFactory` supporting structured model metadata discovery and singleton reuse.
-- **Exhaustive Automated Test Suite**: 223 automated unit, integration, and route validation tests with 100% pass rate.
+- **Advanced Image Quality Assessment**: Multi-metric evaluation subsystem featuring no-reference BRISQUE perceptual distortion scoring, reference-based Structural Similarity Index (SSIM) with per-channel breakdown, and Hasler-Süsstrunk chromatic dispersion measurement.
+- **Exhaustive Automated Test Suite**: 247 automated unit, integration, and route validation tests with 100% pass rate.
 
 ---
 
@@ -149,7 +150,7 @@ pip install -r requirements.txt
 
 ### 2. Model Weights Setup
 
-The model architecture definition (`colorization_deploy_v2.prototxt`), cluster centers (`pts_in_hull.npy`), and FSRCNN super-resolution models (`FSRCNN_x2.pb`, `FSRCNN_x4.pb`) are committed in `model/`.
+The model architecture definition (`colorization_deploy_v2.prototxt`), cluster centers (`pts_in_hull.npy`), FSRCNN super-resolution models (`FSRCNN_x2.pb`, `FSRCNN_x4.pb`), and BRISQUE model assets (`brisque_model_live.yml`, `brisque_range_live.yml`) are committed in `model/`.
 
 - **Colorization Model**: Pretrained Caffe weights (`colorization_release_v2.caffemodel`, ~123 MB) can be downloaded automatically on first inference, or manually placed in `model/`:
   - **Source**: [Zhang et al. Official Release](http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel)
@@ -157,6 +158,9 @@ The model architecture definition (`colorization_deploy_v2.prototxt`), cluster c
 - **Super-Resolution Models**: FSRCNN 2× and 4× models (~40 KB each) in `model/`:
   - **Source**: [Saafke/FSRCNN_Tensorflow](https://github.com/Saafke/FSRCNN_Tensorflow) (Apache-2.0 License)
   - **Destination Paths**: `model/FSRCNN_x2.pb`, `model/FSRCNN_x4.pb`
+- **BRISQUE Quality Models**: Trained SVM parameters and normalization range vectors in `model/`:
+  - **Source**: [OpenCV Contrib Quality Samples](https://github.com/opencv/opencv_contrib/tree/4.x/modules/quality/samples) (BSD-3-Clause)
+  - **Destination Paths**: `model/brisque_model_live.yml`, `model/brisque_range_live.yml`
 
 ### 3. Setup Frontend
 
@@ -199,7 +203,7 @@ npm run dev
 
 ## Testing & Quality Assurance
 
-### Backend Test Suite (223 Tests)
+### Backend Test Suite (247 Tests)
 
 Run all unit, pipeline, and API endpoint tests:
 
@@ -214,16 +218,20 @@ pytest tests/unit/test_super_resolution.py -v
 
 # Run colorization registry and tuning test suite specifically:
 pytest tests/unit/test_colorization_registry.py -v
+
+# Run advanced quality metrics test suites specifically:
+pytest tests/unit/test_quality_metrics.py tests/api/test_quality_routes.py -v
 ```
 
 Test coverage includes:
+- Advanced quality metrics: no-reference BRISQUE evaluation, reference-based Gaussian SSIM (color/grayscale), and Hasler-Süsstrunk colorfulness.
 - Colorizer registry, thread-safe model caching, structured metadata discovery, and render factor validation ($10 \le \text{render\_factor} \le 40$).
 - FSRCNN super-resolution model registry, thread-safe model caching, 2× and 4× upscaling, and 4096px / 12 MP safety guardrails.
 - Archival scratch detection, directional morphology, ridge validation, and OpenCV inpainting (`INPAINT_TELEA` / `INPAINT_NS`).
 - Adaptive Non-Local Means denoising, noise variance heuristics, and texture preservation.
 - Classical enhancement filters (CLAHE contrast, Laplacian sharpening unity-gain invariant).
 - Colorization model loading, fallback handling, and output tensor contracts.
-- FastAPI REST endpoints: validation errors (400, 413, 422), health checks, model status, single and batch processing with `repair=true`/`repair=false`, `upscale=true`/`scale=2|4`, and `render_factor=10..40`.
+- FastAPI REST endpoints: validation errors (400, 413, 422), health checks, model status, single and batch processing with `repair=true`/`repair=false`, `upscale=true`/`scale=2|4`, and quality evaluation.
 
 ### Frontend Type-Check & Build Verification
 
@@ -244,6 +252,7 @@ npm run build
 | `GET` | `/api/v1/models` | Discover registered colorization models, metadata, parameters, and readiness |
 | `GET` | `/api/v1/models/status` | Model weights presence, download status, and readiness |
 | `POST`| `/api/v1/restoration/analyze` | Image quality diagnosis and rule-based recommendations |
+| `POST`| `/api/v1/restoration/quality` | Advanced quality assessment (BRISQUE, SSIM, Colorfulness) |
 | `POST`| `/api/v1/restoration/process` | Single-image upload, pipeline execution, metrics, and tuning |
 | `POST`| `/api/v1/restoration/batch` | Multi-image batch processing (up to 10 files) with ZIP |
 
@@ -254,6 +263,9 @@ npm run build
 - **Source Code**: Licensed under the [MIT License](LICENSE).
 - **Pretrained Colorization Model**: Zhang, Isola, and Efros, *"Colorful Image Colorization"*, ECCV 2016 ([BSD-2-Clause](https://github.com/richzhang/colorization/blob/master/LICENSE)).
 - **Pretrained Super-Resolution Models**: Dong, Loy, and Tang, *"Accelerating the Very Deep Convolutional Networks for Practical Image Restoration"*, ECCV 2016. TensorFlow model port by [Saafke/FSRCNN_Tensorflow](https://github.com/Saafke/FSRCNN_Tensorflow) ([Apache-2.0](https://github.com/Saafke/FSRCNN_Tensorflow/blob/master/LICENSE)).
+- **BRISQUE Quality Assessment**: Mittal, Moorthy, and Bovik, *"No-Reference Image Quality Assessment in the Spatial Domain"*, IEEE TIP 2012 ([BSD-3-Clause](https://github.com/opencv/opencv_contrib/blob/4.x/LICENSE)).
+- **SSIM Quality Assessment**: Wang, Bovik, Sheikh, and Simoncelli, *"Image Quality Assessment: From Error Visibility to Structural Similarity"*, IEEE TIP 2004.
+- **Colorfulness Metric**: Hasler and Süsstrunk, *"Measuring Colorfulness in Natural Images"*, SPIE Human Vision and Electronic Imaging VIII, 2003.
 
 ```bibtex
 @inproceedings{zhang2016colorful,
@@ -268,6 +280,26 @@ npm run build
   author={Dong, Chao and Loy, Chen Change and Tang, Xiaoou},
   booktitle={ECCV},
   year={2016}
+}
+
+@article{mittal2012no,
+  title={No-Reference Image Quality Assessment in the Spatial Domain},
+  author={Mittal, Anish and Moorthy, Anush Krishna and Bovik, Alan Conrad},
+  journal={IEEE Transactions on Image Processing},
+  volume={21},
+  number={12},
+  pages={4695--4708},
+  year={2012}
+}
+
+@article{wang2004image,
+  title={Image Quality Assessment: From Error Visibility to Structural Similarity},
+  author={Wang, Zhou and Bovik, Alan C and Sheikh, Hamid R and Simoncelli, Eero P},
+  journal={IEEE Transactions on Image Processing},
+  volume={13},
+  number={4},
+  pages={600--612},
+  year={2004}
 }
 ```
 

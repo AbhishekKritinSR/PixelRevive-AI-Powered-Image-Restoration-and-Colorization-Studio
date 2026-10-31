@@ -69,3 +69,4 @@ ZHANG_CAFFE_METADATA = ColorizerMetadata(
         "annealed-mean decoding."
     ),
 )
+

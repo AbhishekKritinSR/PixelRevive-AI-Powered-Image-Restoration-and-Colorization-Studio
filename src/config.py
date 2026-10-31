@@ -19,6 +19,8 @@ MODEL_PATH = MODEL_DIR / "colorization_release_v2.caffemodel"
 POINTS_PATH = MODEL_DIR / "pts_in_hull.npy"
 FSRCNN_X2_PATH = MODEL_DIR / "FSRCNN_x2.pb"
 FSRCNN_X4_PATH = MODEL_DIR / "FSRCNN_x4.pb"
+BRISQUE_MODEL_PATH = MODEL_DIR / "brisque_model_live.yml"
+BRISQUE_RANGE_PATH = MODEL_DIR / "brisque_range_live.yml"
 
 # Official source (Richard Zhang / UC Berkeley), the same URL OpenCV's own
 # sample code and documentation point to. Plain HTTP because that's the

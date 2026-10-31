@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import List, Set
 
 from src.config import (
+    BRISQUE_MODEL_PATH,
+    BRISQUE_RANGE_PATH,
     DEFAULT_RENDER_FACTOR,
     FSRCNN_X2_PATH,
     FSRCNN_X4_PATH,
@@ -85,6 +87,8 @@ class Settings:
     POINTS_PATH: Path = POINTS_PATH
     FSRCNN_X2_PATH: Path = FSRCNN_X2_PATH
     FSRCNN_X4_PATH: Path = FSRCNN_X4_PATH
+    BRISQUE_MODEL_PATH: Path = BRISQUE_MODEL_PATH
+    BRISQUE_RANGE_PATH: Path = BRISQUE_RANGE_PATH
 
 
 # Global settings singleton
