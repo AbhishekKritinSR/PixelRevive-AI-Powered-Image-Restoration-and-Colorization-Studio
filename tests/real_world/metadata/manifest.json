@@ -1,0 +1,212 @@
+[
+  {
+    "image_id": "IMG_01",
+    "original_filename": "img_01_lincoln_cracked_plate.jpg",
+    "title": "President Abraham Lincoln, last formal studio portrait before his assassination (cracked glass negative)",
+    "creator": "Alexander Gardner",
+    "date_created": "1865-02-05",
+    "source_institution": "Library of Congress / National Portrait Gallery (Alexander Gardner Collection)",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:Abraham_Lincoln_O-118_by_Gardner,_1865.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/b/bb/Abraham_Lincoln_O-118_by_Gardner%2C_1865.jpg",
+    "rights_statement": "Public Domain (US work created February 5, 1865; author died 1882; term expired)",
+    "original_dimensions": {
+      "width": 4595,
+      "height": 5262,
+      "channels": 3
+    },
+    "file_size_bytes": 3095777,
+    "sha256_checksum": "b3d9c9ea4335c633410ffd22b0877217c1b6378fffb9a08dc3c925de4276c3c9",
+    "damage_category": "Category L (Torn and Damaged) / Category I (Scratches)",
+    "observed_defects": "Severe diagonal structural crack across glass negative over top of skull; perimeter emulsion flaking and fine scratches.",
+    "evaluation_notes": "Benchmark for deep contextual inpainting (LaMa) across prominent portrait cranium and boundary edge alignment."
+  },
+  {
+    "image_id": "IMG_02",
+    "original_filename": "img_02_bertinot_torn_portrait.jpg",
+    "title": "Portrait of engraver Gustave Bertinot (torn cabinet card / photographic print)",
+    "creator": "Eug\u00e8ne Pirou",
+    "date_created": "c. 1880-1888",
+    "source_institution": "Images d'Art / R\u00e9union des Mus\u00e9es Nationaux - Grand Palais (RMN-GP)",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:Pirou-Bertinot.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/b/b4/Pirou-Bertinot.jpg",
+    "rights_statement": "Public Domain (Photographer Eug\u00e8ne Pirou died 1909; work created c. 1880-1888; life+70 years expired)",
+    "original_dimensions": {
+      "width": 234,
+      "height": 340,
+      "channels": 3
+    },
+    "file_size_bytes": 44700,
+    "sha256_checksum": "55ac5c53a148b9a6c719e51afe85bef357f533a76f05c45a32c6f4af56ffe73d",
+    "damage_category": "Category L (Torn and Damaged Photographs)",
+    "observed_defects": "Severe physical paper tear with triangular missing void along bottom-right edge extending into coat and lapel.",
+    "evaluation_notes": "Tests structural inpainting boundary synthesis and tonal continuity across fabric and background paper fibers."
+  },
+  {
+    "image_id": "IMG_03",
+    "original_filename": "img_03_mcrae_scratched_portrait.jpg",
+    "title": "Brigadier General Dandridge McRae in prewar militia uniform",
+    "creator": "Unknown Arkansas photographer",
+    "date_created": "c. 1860-1861",
+    "source_institution": "Arkansas State Archives / Prairie Grove Battlefield State Park",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:Dandridge_McRae,_in_prewar_militia_uniform.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Dandridge_McRae%2C_in_prewar_militia_uniform.jpg",
+    "rights_statement": "Public Domain (US work created c. 1860-1861; pre-1928 publication)",
+    "original_dimensions": {
+      "width": 1390,
+      "height": 1924,
+      "channels": 3
+    },
+    "file_size_bytes": 806802,
+    "sha256_checksum": "98c7073b464cb8443f13c5dc7d6c72e6ad4a7c5ab55c78f9aef3056e4ffe92ea",
+    "damage_category": "Category I (Scratched Black-and-White Portraits)",
+    "observed_defects": "Extensive linear scratches traversing chest, uniform buttons, and background; emulsion abrasion and vertical hairline fissures.",
+    "evaluation_notes": "Tests directional multi-scale scratch detection and inpainting precision without altering facial features."
+  },
+  {
+    "image_id": "IMG_04",
+    "original_filename": "img_04_butler_scratched_negative.jpg",
+    "title": "Ellis Parker Butler, author portrait",
+    "creator": "Bain News Service",
+    "date_created": "c. 1910-1915",
+    "source_institution": "Library of Congress Prints and Photographs Division (George Grantham Bain Collection, LCCN 2014719574)",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:Ellis_Parker_Butler_LCCN2014719574.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/5/5a/Ellis_Parker_Butler_LCCN2014719574.jpg",
+    "rights_statement": "Public Domain / No known copyright restrictions (Library of Congress Bain Collection)",
+    "original_dimensions": {
+      "width": 4141,
+      "height": 5685,
+      "channels": 3
+    },
+    "file_size_bytes": 2979001,
+    "sha256_checksum": "9b99d2d3addf5459fa3bb63a8b9cb3732e7a072cd18d6d06232769e0ef78ddfe",
+    "damage_category": "Category I (Scratched B&W Portraits) / Category K (Archival Noise)",
+    "observed_defects": "Prominent white vertical scratches across dark jacket, fine emulsion scratches over hair, scattered dust speckles.",
+    "evaluation_notes": "Verifies scratch repair against high-contrast textile boundaries alongside mild grain denoising."
+  },
+  {
+    "image_id": "IMG_05",
+    "original_filename": "img_05_vanderbilt_faded_daguerreotype.jpg",
+    "title": "Cornelius Vanderbilt, unrestored half-plate daguerreotype",
+    "creator": "Mathew B. Brady Studio",
+    "date_created": "c. 1850-1855",
+    "source_institution": "Library of Congress Prints and Photographs Division (Mathew B. Brady Studio Collection, DAG no. 1222)",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:Cornelius_Vanderbilt_Daguerrotype.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/5/58/Cornelius_Vanderbilt_Daguerrotype.jpg",
+    "rights_statement": "Public Domain (Mathew Brady Studio, c. 1850-1855; US public domain)",
+    "original_dimensions": {
+      "width": 3175,
+      "height": 4096,
+      "channels": 3
+    },
+    "file_size_bytes": 6983961,
+    "sha256_checksum": "5c58120e765e172595b0929af1d87a141503f496f5595ce212706b4b999df9de",
+    "damage_category": "Category J (Faded Historical Photographs) / Category I (Scratches)",
+    "observed_defects": "Faded dynamic range, low global contrast, silver plate tarnish along peripheral rim, fine daguerreotype polishing wipe marks.",
+    "evaluation_notes": "Verifies adaptive CLAHE dynamic range expansion on genuine faded 1850s silver plate while preserving authentic highlights."
+  },
+  {
+    "image_id": "IMG_06",
+    "original_filename": "img_06_bryan_damaged_negative.jpg",
+    "title": "W.J. Bryan and wife (negative damaged)",
+    "creator": "Bain News Service",
+    "date_created": "c. 1908",
+    "source_institution": "Library of Congress Prints and Photographs Division (George Grantham Bain Collection, LCCN 2014687104)",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:W.J._Bryan_and_wife_(negative_damaged)_LCCN2014687104.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/d/de/W.J._Bryan_and_wife_%28negative_damaged%29_LCCN2014687104.jpg",
+    "rights_statement": "Public Domain / No known copyright restrictions (Library of Congress Bain Collection)",
+    "original_dimensions": {
+      "width": 5754,
+      "height": 4204,
+      "channels": 3
+    },
+    "file_size_bytes": 1612878,
+    "sha256_checksum": "2820e75fdfdb24d9e1747ee31ba57305bc34a9bf97641e7097929f490e165263",
+    "damage_category": "Category J (Faded Contrast) / Category L (Damaged / Reticulated Emulsion)",
+    "observed_defects": "Extensive chemical emulsion reticulation and fogging across left flank; faded contrast; uneven lighting and surface abrasions.",
+    "evaluation_notes": "Composite real-world degradation testing contrast recovery, texture blending, and damage mask selective repair."
+  },
+  {
+    "image_id": "IMG_07",
+    "original_filename": "img_07_horowitz_noisy_grain.jpg",
+    "title": "Vladimir Horowitz seated at grand piano",
+    "creator": "Bain News Service",
+    "date_created": "c. 1928",
+    "source_institution": "Library of Congress Prints and Photographs Division (George Grantham Bain Collection, LC-B2- 6088-3)",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:HorowitzPianoBain2.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/8/80/HorowitzPianoBain2.jpg",
+    "rights_statement": "Public Domain / No known copyright restrictions (Library of Congress Bain Collection)",
+    "original_dimensions": {
+      "width": 1481,
+      "height": 997,
+      "channels": 3
+    },
+    "file_size_bytes": 417516,
+    "sha256_checksum": "ae3a2b2b5819ac1a4149fa753d501fd83aedc6a08c7e157b152ade2c186eebf0",
+    "damage_category": "Category K (Noisy Archival Photographs)",
+    "observed_defects": "Dense silver halide grain throughout shadow and midtone regions, scanner optical noise, delicate low-contrast piano details.",
+    "evaluation_notes": "Tests adaptive Non-Local Means noise attenuation with texture-guided residual blending to avoid over-smoothing hands and facial features."
+  },
+  {
+    "image_id": "IMG_08",
+    "original_filename": "img_08_migrant_mother_grain.jpg",
+    "title": "Destitute pea pickers in California (Migrant Mother)",
+    "creator": "Dorothea Lange",
+    "date_created": "1936-03",
+    "source_institution": "Library of Congress Prints and Photographs Division (Farm Security Administration Collection, LC-DIG-fsa-8b29516)",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:Lange-MigrantMother02.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/5/54/Lange-MigrantMother02.jpg",
+    "rights_statement": "Public Domain (Work of the United States Federal Government, FSA/OWI, Dorothea Lange)",
+    "original_dimensions": {
+      "width": 6205,
+      "height": 8066,
+      "channels": 3
+    },
+    "file_size_bytes": 5835684,
+    "sha256_checksum": "bf7f77f366bd714735a3a7ec54df56caab0e11e9bd8ed6df2afa7147a94fbac7",
+    "damage_category": "Category K (Noisy Archival) / Category M (Historical Colourization)",
+    "observed_defects": "Authentic nitrate film grain, high-contrast midtones, weathered skin textures, subtle scanner artifacts.",
+    "evaluation_notes": "Evaluates facial feature and texture preservation during denoising, and chromatic balance under neural colourization."
+  },
+  {
+    "image_id": "IMG_09",
+    "original_filename": "img_09_douglass_historical_portrait.jpg",
+    "title": "Frederick Douglass, head-and-shoulders portrait, facing right",
+    "creator": "George Kendall Warren",
+    "date_created": "c. 1879",
+    "source_institution": "Library of Congress Prints and Photographs Division (LCCN 2004671911)",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:Frederick_Douglass,_head-and-shoulders_portrait,_facing_right_LCCN2004671911.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/d/d0/Frederick_Douglass%2C_head-and-shoulders_portrait%2C_facing_right_LCCN2004671911.jpg",
+    "rights_statement": "Public Domain / No known copyright restrictions (George Kendall Warren, c. 1879, Library of Congress)",
+    "original_dimensions": {
+      "width": 816,
+      "height": 1024,
+      "channels": 3
+    },
+    "file_size_bytes": 171909,
+    "sha256_checksum": "2af9262bf09bfd6b0aa5d89d8a30dc43d0b21d74656f44d645f5528c7dad9ed8",
+    "damage_category": "Category M (Historical Colourization) / Category N (Clean Archival)",
+    "observed_defects": "Clean archival print; very fine dust particles; rich authentic 19th-century photographic tones.",
+    "evaluation_notes": "Tests Zhang Caffe neural colourization on historical portraiture (skin, hair, suit) and tests clean-image safeguard bypass."
+  },
+  {
+    "image_id": "IMG_10",
+    "original_filename": "img_10_whitman_clean_archival.jpg",
+    "title": "Walt Whitman seated, wearing wide-brimmed hat",
+    "creator": "George Collins Cox",
+    "date_created": "1887-04-15",
+    "source_institution": "Library of Congress Prints and Photographs Division (cph.3b20763 / LC-USZ62-73130)",
+    "source_page_url": "https://commons.wikimedia.org/wiki/File:Walt_Whitman_by_George_C._Cox_cph.3b20763.jpg",
+    "direct_download_url": "https://upload.wikimedia.org/wikipedia/commons/3/34/Walt_Whitman_by_George_C._Cox_cph.3b20763.jpg",
+    "rights_statement": "Public Domain / No known copyright restrictions (George Collins Cox, April 15, 1887, Library of Congress)",
+    "original_dimensions": {
+      "width": 960,
+      "height": 1207,
+      "channels": 3
+    },
+    "file_size_bytes": 200589,
+    "sha256_checksum": "84b7f99b914efc71919277012744b06c441705024facc1c23a67082e87ca807a",
+    "damage_category": "Category N (Clean Archival Photographs - Adaptive Protection)",
+    "observed_defects": "Pristine archival condition; superb natural contrast, sharp beard hairs, intact tonal gradations; zero physical scratches.",
+    "evaluation_notes": "Benchmark verification that Phase 3.5 clean-image protection correctly bypasses CLAHE and sharpening on pristine historical photos."
+  }
+]
