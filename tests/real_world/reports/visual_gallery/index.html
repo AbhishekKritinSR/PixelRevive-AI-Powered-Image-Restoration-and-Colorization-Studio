@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixelRevive Phase 3.7 Visual Comparison Gallery</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; }
+        h1 { text-align: center; color: #38bdf8; margin-bottom: 8px; font-size: 28px; }
+        p.subtitle { text-align: center; color: #94a3b8; font-size: 15px; margin-bottom: 32px; }
+        .card { background: #1e293b; border-radius: 12px; border: 1px solid #334155; padding: 20px; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
+        .card h2 { color: #e2e8f0; font-size: 20px; margin-top: 0; margin-bottom: 8px; }
+        .meta { font-size: 13px; color: #94a3b8; margin: 4px 0 8px 0; }
+        .category { font-size: 14px; color: #38bdf8; margin-bottom: 16px; }
+        .image-box img { width: 100%; border-radius: 6px; display: block; border: 1px solid #475569; }
+        .details { margin-top: 16px; background: #0f172a; padding: 14px; border-radius: 8px; border: 1px solid #1e293b; }
+        .details h3 { font-size: 15px; color: #f1f5f9; margin-top: 0; margin-bottom: 8px; }
+        .details ul { margin: 0 0 12px 18px; padding: 0; font-size: 13px; color: #cbd5e1; }
+        .details li { margin-bottom: 4px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 13px; color: #93c5fd; background: #1e293b; padding: 10px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <h1>PixelRevive – Master Visual Restoration Gallery</h1>
+    <p class="subtitle">Phase 3.7 Visual Quality Audit across 10 Authentic Archival Master Photographs</p>
+    
+    <div class="card">
+        <h2>IMG_01: President Abraham Lincoln, last formal studio portrait before his assassination (cracked glass negative)</h2>
+        <p class="meta"><strong>Source:</strong> Library of Congress / National Portrait Gallery (Alexander Gardner Collection) | <strong>Date:</strong> 1865-02-05 | <strong>Rights:</strong> Public Domain (US work created February 5, 1865; author died 1882; term expired)</p>
+        <p class="category"><strong>Category:</strong> Category L (Torn and Damaged) / Category I (Scratches)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_01_img_01_lincoln_cracked_plate.png" alt="President Abraham Lincoln, last formal studio portrait before his assassination (cracked glass negative)" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 3001 damaged pixels reconstructed (0.13%) using LAMA.</li><li><strong>denoising:</strong> Applied: adaptive Non-Local Means (sigma=3.00, level=low, h=3.0) with texture-guided residual blending.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=64.6 >= 22.0, dynamic range=230.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Applied: unity-gain high-pass Laplacian sharpening for edge recovery (Laplacian variance=89.1 < 120.0, noise sigma=1.06).</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 310.48 &rarr; 2673.76</div>
+                <div><strong>Contrast std:</strong> 64.63 &rarr; 65.6</div>
+                <div><strong>Noise sigma:</strong> 3.0 &rarr; 7.72</div>
+                <div><strong>Colorfulness:</strong> 0.0 &rarr; 0.76</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>IMG_02: Portrait of engraver Gustave Bertinot (torn cabinet card / photographic print)</h2>
+        <p class="meta"><strong>Source:</strong> Images d'Art / Réunion des Musées Nationaux - Grand Palais (RMN-GP) | <strong>Date:</strong> c. 1880-1888 | <strong>Rights:</strong> Public Domain (Photographer Eugène Pirou died 1909; work created c. 1880-1888; life+70 years expired)</p>
+        <p class="category"><strong>Category:</strong> Category L (Torn and Damaged Photographs)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_02_img_02_bertinot_torn_portrait.png" alt="Portrait of engraver Gustave Bertinot (torn cabinet card / photographic print)" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 569 damaged pixels reconstructed (0.72%) using LAMA.</li><li><strong>denoising:</strong> Bypassed: measured noise variance is pristine (sigma=0.98 < 1.5). Filtering skipped to preserve photographic clarity.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=47.6 >= 22.0, dynamic range=193.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Bypassed: image already exhibits sufficient edge sharpness (Laplacian variance=196.3 >= 120.0). Sharpening skipped to prevent haloing.</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 226.66 &rarr; 196.68</div>
+                <div><strong>Contrast std:</strong> 47.57 &rarr; 47.42</div>
+                <div><strong>Noise sigma:</strong> 1.01 &rarr; 0.97</div>
+                <div><strong>Colorfulness:</strong> 13.27 &rarr; 13.27</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>IMG_03: Brigadier General Dandridge McRae in prewar militia uniform</h2>
+        <p class="meta"><strong>Source:</strong> Arkansas State Archives / Prairie Grove Battlefield State Park | <strong>Date:</strong> c. 1860-1861 | <strong>Rights:</strong> Public Domain (US work created c. 1860-1861; pre-1928 publication)</p>
+        <p class="category"><strong>Category:</strong> Category I (Scratched Black-and-White Portraits)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_03_img_03_mcrae_scratched_portrait.png" alt="Brigadier General Dandridge McRae in prewar militia uniform" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 5240 damaged pixels reconstructed (0.28%) using TELEA.</li><li><strong>denoising:</strong> Applied: adaptive Non-Local Means (sigma=2.42, level=low, h=3.0) with texture-guided residual blending.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=82.0 >= 22.0, dynamic range=251.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Bypassed: image already exhibits sufficient edge sharpness (Laplacian variance=384.2 >= 120.0). Sharpening skipped to prevent haloing.</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 430.57 &rarr; 372.57</div>
+                <div><strong>Contrast std:</strong> 81.71 &rarr; 81.95</div>
+                <div><strong>Noise sigma:</strong> 2.43 &rarr; 2.17</div>
+                <div><strong>Colorfulness:</strong> 4.87 &rarr; 4.62</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>IMG_04: Ellis Parker Butler, author portrait</h2>
+        <p class="meta"><strong>Source:</strong> Library of Congress Prints and Photographs Division (George Grantham Bain Collection, LCCN 2014719574) | <strong>Date:</strong> c. 1910-1915 | <strong>Rights:</strong> Public Domain / No known copyright restrictions (Library of Congress Bain Collection)</p>
+        <p class="category"><strong>Category:</strong> Category I (Scratched B&W Portraits) / Category K (Archival Noise)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_04_img_04_butler_scratched_negative.png" alt="Ellis Parker Butler, author portrait" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 4561 damaged pixels reconstructed (0.24%) using TELEA.</li><li><strong>denoising:</strong> Applied: adaptive Non-Local Means (sigma=1.74, level=low, h=3.0) with texture-guided residual blending.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=60.3 >= 22.0, dynamic range=239.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Bypassed: image already exhibits sufficient edge sharpness (Laplacian variance=219.9 >= 120.0). Sharpening skipped to prevent haloing.</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 299.42 &rarr; 219.93</div>
+                <div><strong>Contrast std:</strong> 60.27 &rarr; 60.27</div>
+                <div><strong>Noise sigma:</strong> 1.74 &rarr; 0.83</div>
+                <div><strong>Colorfulness:</strong> 0.0 &rarr; 0.25</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>IMG_05: Cornelius Vanderbilt, unrestored half-plate daguerreotype</h2>
+        <p class="meta"><strong>Source:</strong> Library of Congress Prints and Photographs Division (Mathew B. Brady Studio Collection, DAG no. 1222) | <strong>Date:</strong> c. 1850-1855 | <strong>Rights:</strong> Public Domain (Mathew Brady Studio, c. 1850-1855; US public domain)</p>
+        <p class="category"><strong>Category:</strong> Category J (Faded Historical Photographs) / Category I (Scratches)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_05_img_05_vanderbilt_faded_daguerreotype.png" alt="Cornelius Vanderbilt, unrestored half-plate daguerreotype" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 6391 damaged pixels reconstructed (0.32%) using TELEA.</li><li><strong>denoising:</strong> Applied: adaptive Non-Local Means (sigma=2.47, level=low, h=3.0) with texture-guided residual blending.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=60.4 >= 22.0, dynamic range=227.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Bypassed: image already exhibits sufficient edge sharpness (Laplacian variance=383.3 >= 120.0). Sharpening skipped to prevent haloing.</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 528.95 &rarr; 383.26</div>
+                <div><strong>Contrast std:</strong> 60.18 &rarr; 60.38</div>
+                <div><strong>Noise sigma:</strong> 2.48 &rarr; 1.26</div>
+                <div><strong>Colorfulness:</strong> 0.0 &rarr; 0.26</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>IMG_06: W.J. Bryan and wife (negative damaged)</h2>
+        <p class="meta"><strong>Source:</strong> Library of Congress Prints and Photographs Division (George Grantham Bain Collection, LCCN 2014687104) | <strong>Date:</strong> c. 1908 | <strong>Rights:</strong> Public Domain / No known copyright restrictions (Library of Congress Bain Collection)</p>
+        <p class="category"><strong>Category:</strong> Category J (Faded Contrast) / Category L (Damaged / Reticulated Emulsion)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_06_img_06_bryan_damaged_negative.png" alt="W.J. Bryan and wife (negative damaged)" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 16081 damaged pixels reconstructed (0.86%) using TELEA.</li><li><strong>denoising:</strong> Bypassed: measured noise variance is pristine (sigma=0.71 < 1.5). Filtering skipped to preserve photographic clarity.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=79.3 >= 22.0, dynamic range=228.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Applied: unity-gain high-pass Laplacian sharpening for edge recovery (Laplacian variance=109.6 < 120.0, noise sigma=0.71).</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 174.67 &rarr; 1832.08</div>
+                <div><strong>Contrast std:</strong> 79.65 &rarr; 80.51</div>
+                <div><strong>Noise sigma:</strong> 0.72 &rarr; 5.1</div>
+                <div><strong>Colorfulness:</strong> 0.0 &rarr; 0.0</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>IMG_07: Vladimir Horowitz seated at grand piano</h2>
+        <p class="meta"><strong>Source:</strong> Library of Congress Prints and Photographs Division (George Grantham Bain Collection, LC-B2- 6088-3) | <strong>Date:</strong> c. 1928 | <strong>Rights:</strong> Public Domain / No known copyright restrictions (Library of Congress Bain Collection)</p>
+        <p class="category"><strong>Category:</strong> Category K (Noisy Archival Photographs)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_07_img_07_horowitz_noisy_grain.png" alt="Vladimir Horowitz seated at grand piano" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 8911 damaged pixels reconstructed (0.6%) using TELEA.</li><li><strong>denoising:</strong> Bypassed: measured noise variance is pristine (sigma=0.67 < 1.5). Filtering skipped to preserve photographic clarity.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=38.8 >= 22.0, dynamic range=184.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Applied: unity-gain high-pass Laplacian sharpening for edge recovery (Laplacian variance=19.9 < 120.0, noise sigma=0.67).</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 19.51 &rarr; 617.61</div>
+                <div><strong>Contrast std:</strong> 38.82 &rarr; 39.24</div>
+                <div><strong>Noise sigma:</strong> 0.67 &rarr; 4.78</div>
+                <div><strong>Colorfulness:</strong> 0.0 &rarr; 0.0</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>IMG_08: Destitute pea pickers in California (Migrant Mother)</h2>
+        <p class="meta"><strong>Source:</strong> Library of Congress Prints and Photographs Division (Farm Security Administration Collection, LC-DIG-fsa-8b29516) | <strong>Date:</strong> 1936-03 | <strong>Rights:</strong> Public Domain (Work of the United States Federal Government, FSA/OWI, Dorothea Lange)</p>
+        <p class="category"><strong>Category:</strong> Category K (Noisy Archival) / Category M (Historical Colourization)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_08_img_08_migrant_mother_grain.png" alt="Destitute pea pickers in California (Migrant Mother)" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 8983 damaged pixels reconstructed (0.46%) using TELEA.</li><li><strong>denoising:</strong> Applied: adaptive Non-Local Means (sigma=2.51, level=low, h=3.0) with texture-guided residual blending.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=52.0 >= 22.0, dynamic range=211.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Bypassed: image already exhibits sufficient edge sharpness (Laplacian variance=182.0 >= 120.0). Sharpening skipped to prevent haloing.</li><li><strong>colorization:</strong> Applied: deep neural colorization using zhang_caffe with guided chrominance refinement.</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 277.08 &rarr; 175.38</div>
+                <div><strong>Contrast std:</strong> 52.17 &rarr; 51.31</div>
+                <div><strong>Noise sigma:</strong> 2.51 &rarr; 1.4</div>
+                <div><strong>Colorfulness:</strong> 0.0 &rarr; 31.37</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>IMG_09: Frederick Douglass, head-and-shoulders portrait, facing right</h2>
+        <p class="meta"><strong>Source:</strong> Library of Congress Prints and Photographs Division (LCCN 2004671911) | <strong>Date:</strong> c. 1879 | <strong>Rights:</strong> Public Domain / No known copyright restrictions (George Kendall Warren, c. 1879, Library of Congress)</p>
+        <p class="category"><strong>Category:</strong> Category M (Historical Colourization) / Category N (Clean Archival)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_09_img_09_douglass_historical_portrait.png" alt="Frederick Douglass, head-and-shoulders portrait, facing right" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 4342 damaged pixels reconstructed (0.52%) using TELEA.</li><li><strong>denoising:</strong> Applied: adaptive Non-Local Means (sigma=3.69, level=low, h=3.0) with texture-guided residual blending.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=68.9 >= 22.0, dynamic range=249.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Bypassed: image already exhibits sufficient edge sharpness (Laplacian variance=910.9 >= 120.0). Sharpening skipped to prevent haloing.</li><li><strong>colorization:</strong> Applied: deep neural colorization using zhang_caffe with guided chrominance refinement.</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 1171.44 &rarr; 925.21</div>
+                <div><strong>Contrast std:</strong> 69.08 &rarr; 66.03</div>
+                <div><strong>Noise sigma:</strong> 3.69 &rarr; 2.72</div>
+                <div><strong>Colorfulness:</strong> 0.0 &rarr; 36.57</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>IMG_10: Walt Whitman seated, wearing wide-brimmed hat</h2>
+        <p class="meta"><strong>Source:</strong> Library of Congress Prints and Photographs Division (cph.3b20763 / LC-USZ62-73130) | <strong>Date:</strong> 1887-04-15 | <strong>Rights:</strong> Public Domain / No known copyright restrictions (George Collins Cox, April 15, 1887, Library of Congress)</p>
+        <p class="category"><strong>Category:</strong> Category N (Clean Archival Photographs - Adaptive Protection)</p>
+        <div class="image-box">
+            <img src="gallery_IMG_10_img_10_whitman_clean_archival.png" alt="Walt Whitman seated, wearing wide-brimmed hat" />
+        </div>
+        <div class="details">
+            <h3>Restoration Operations & Decision Log</h3>
+            <ul><li><strong>scratch_repair:</strong> Applied: 4654 damaged pixels reconstructed (0.4%) using TELEA.</li><li><strong>denoising:</strong> Bypassed: measured noise variance is pristine (sigma=0.85 < 1.5). Filtering skipped to preserve photographic clarity.</li><li><strong>contrast:</strong> Bypassed: image exhibits adequate natural contrast (std=71.4 >= 22.0, dynamic range=234.0 >= 65.0). CLAHE skipped to prevent over-enhancement.</li><li><strong>sharpening:</strong> Applied: unity-gain high-pass Laplacian sharpening for edge recovery (Laplacian variance=118.5 < 120.0, noise sigma=0.85).</li></ul>
+            <div class="metrics-grid">
+                <div><strong>Laplacian Var:</strong> 118.79 &rarr; 1780.21</div>
+                <div><strong>Contrast std:</strong> 71.36 &rarr; 73.15</div>
+                <div><strong>Noise sigma:</strong> 0.84 &rarr; 5.17</div>
+                <div><strong>Colorfulness:</strong> 0.0 &rarr; 0.0</div>
+            </div>
+        </div>
+    </div>
+    
+</body>
+</html>
