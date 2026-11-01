@@ -395,3 +395,86 @@ class TestPipelineIntegration:
         assert restored.shape == damaged.shape
         assert restored.dtype == np.uint8
         assert np.all(np.isfinite(restored))
+
+
+# =====================================================================
+# 6. Deep Scratch Detection and Multi-Orientation Regression Tests
+# =====================================================================
+
+
+class TestDeepScratchAndInpaintingInvestigation:
+    """Rigorous regression tests for multi-angle, multi-scale, and facial scratch detection."""
+
+    @pytest.mark.parametrize("angle_deg", [30, 60, 120])
+    def test_diagonal_scratch_arbitrary_angles(self, clean_uniform_image, angle_deg):
+        """Test scratch detection across arbitrary non-cardinal diagonal angles (30°, 60°, 120°)."""
+        img = clean_uniform_image.copy()
+        rad = np.deg2rad(angle_deg)
+        cx, cy = 75, 75
+        dx, dy = np.cos(rad), np.sin(rad)
+        pt1 = (int(cx - 45 * dx), int(cy - 45 * dy))
+        pt2 = (int(cx + 45 * dx), int(cy + 45 * dy))
+
+        cv2.line(img, pt1, pt2, (20, 20, 20), 2)
+        mask, meta = detect_scratch_mask(img)
+
+        assert meta.applied is True
+        assert meta.detected_components >= 1
+        assert meta.repaired_pixels > 0
+        assert mask[cy, cx] == 255
+
+    def test_border_scratch_detection(self, clean_uniform_image):
+        """Thin scratches along image borders (within 10px of margin) must be captured."""
+        img = clean_uniform_image.copy()
+        # Line right along the left margin at x=6
+        cv2.line(img, (6, 15), (6, 135), (245, 245, 245), 2)
+
+        mask, meta = detect_scratch_mask(img)
+
+        assert meta.applied is True
+        assert meta.detected_components >= 1
+        assert np.count_nonzero(mask[:, 0:15]) > 0
+
+    def test_multiscale_scratch_detection(self, clean_uniform_image):
+        """Both fine hairlines (1px) and broad scratches (4px) must be detected."""
+        # 1. Hairline
+        img_fine = clean_uniform_image.copy()
+        cv2.line(img_fine, (20, 75), (130, 75), (15, 15, 15), 1)
+        _, meta_fine = detect_scratch_mask(img_fine)
+        assert meta_fine.applied is True
+
+        # 2. Broad
+        img_broad = clean_uniform_image.copy()
+        cv2.line(img_broad, (20, 75), (130, 75), (15, 15, 15), 4)
+        _, meta_broad = detect_scratch_mask(img_broad)
+        assert meta_broad.applied is True
+        assert meta_broad.repaired_pixels > meta_fine.repaired_pixels
+
+    def test_sensitivity_presets(self, clean_uniform_image):
+        """Sensitivity presets ('high', 'medium', 'low') must tune threshold responsiveness."""
+        img = clean_uniform_image.copy()
+        # Faint scratch with contrast delta ~ 14
+        cv2.line(img, (20, 75), (130, 75), (114, 114, 114), 1)
+
+        # High sensitivity detects faint defect
+        _, meta_high = detect_scratch_mask(img, sensitivity="high")
+        assert meta_high.applied is True
+
+        # Low sensitivity ignores faint defect
+        _, meta_low = detect_scratch_mask(img, sensitivity="low")
+        assert meta_low.applied is False
+
+    def test_mask_dilation_covers_penumbra(self, clean_uniform_image):
+        """Generated mask must be dilated to cover scratch transition boundaries."""
+        img = clean_uniform_image.copy()
+        cv2.line(img, (30, 75), (120, 75), (20, 20, 20), 1)
+
+        mask, meta = detect_scratch_mask(img)
+        assert meta.applied is True
+
+        # Center line must be 255
+        assert mask[75, 50] == 255
+        # Penumbra flank (1px above and below) must also be covered due to dilation
+        assert mask[74, 50] == 255
+        assert mask[76, 50] == 255
+

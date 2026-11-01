@@ -9,9 +9,11 @@ Responsibilities:
 - Validate model asset presence on disk (model/lama_fp32.onnx).
 - Manage thread-safe ONNX Runtime InferenceSession lifecycle.
 - Preprocess arbitrary-dimension input images and binary masks into 512x512 tensors.
+- Resample masks with anti-aliasing preservation to prevent dropping thin scratches.
 - Execute deep neural inference with Fast Fourier Convolutions.
 - Postprocess and seamlessly blend inpainted regions back into original resolution.
-- Ensure 100% preservation of undamaged pixels outside the defect mask.
+- Eliminate boundary step discontinuities via distance-transform feathering.
+- Ensure 100% bit-for-bit preservation of undamaged pixels outside the defect mask.
 - Provide graceful fallback when the model asset is unavailable.
 
 Syllabus Alignment:
@@ -133,8 +135,9 @@ class LaMaInpainter:
         rgb_512 = cv2.resize(rgb, (512, 512), interpolation=cv2.INTER_LINEAR)
 
         # Preprocess mask: uint8 -> float32 [0.0, 1.0] (1.0 = defect to repair)
+        # Resample with INTER_LINEAR to prevent thin 1-2px scratches from aliasing out
         mask_binary = (mask_dilated > 0).astype(np.float32)
-        mask_512 = cv2.resize(mask_binary, (512, 512), interpolation=cv2.INTER_NEAREST)
+        mask_512 = (cv2.resize(mask_binary, (512, 512), interpolation=cv2.INTER_LINEAR) > 0.02).astype(np.float32)
 
         # Zero-out defect pixels in input tensor (standard LaMa protocol)
         rgb_512 = rgb_512 * (1.0 - mask_512[:, :, np.newaxis])
@@ -163,9 +166,15 @@ class LaMaInpainter:
         repaired_bgr_512 = cv2.cvtColor(out_patch, cv2.COLOR_RGB2BGR)
         repaired_bgr = cv2.resize(repaired_bgr_512, (w, h), interpolation=cv2.INTER_LINEAR)
 
-        # Strict preservation guard:
-        # Only replace pixels marked in the repair mask, keeping 100% of uncorrupted pixels intact
-        mask_3d = (mask_dilated > 0)[:, :, np.newaxis]
-        result = np.where(mask_3d, repaired_bgr, image_bgr)
+        # Seamless boundary feathering & strict uncorrupted pixel preservation guard:
+        # Use distance transform to create a smooth 2-pixel transition ramp at mask edges,
+        # completely preventing step-edge ringing when Laplacian sharpening runs later.
+        dist = cv2.distanceTransform((mask_dilated > 0).astype(np.uint8), cv2.DIST_L2, 3)
+        alpha = np.clip(dist / 2.0, 0.0, 1.0)[:, :, np.newaxis]
+        blended = (repaired_bgr.astype(np.float32) * alpha + image_bgr.astype(np.float32) * (1.0 - alpha))
+        result = np.clip(blended, 0, 255).astype(np.uint8)
+
+        # Hard safety guarantee: outside mask_dilated, 100% bit-for-bit identical to image_bgr
+        result[mask_dilated == 0] = image_bgr[mask_dilated == 0]
 
         return result, True

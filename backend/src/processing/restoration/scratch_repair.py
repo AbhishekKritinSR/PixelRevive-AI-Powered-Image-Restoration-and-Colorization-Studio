@@ -4,11 +4,19 @@ Purpose:
 Provides archival scratch detection and inpainting reconstruction for damaged photographs.
 
 Key Responsibilities:
-- Multi-orientation directional morphological defect detection (horizontal, vertical, diagonal 45 deg, diagonal 135 deg).
-- Dual-polarity defect capture (dark scratches on light regions via Black-Hat, bright scratches on dark regions via Top-Hat).
-- Connected-component geometric filtering (aspect ratio, length, thickness, and ridge vs step-edge analysis to reject false positives).
+- Multi-orientation directional morphological defect detection covering 12 angular orientations grouped into
+  4 directional families (Horizontal: 0°, 15°, 165°; Diagonal 45°: 30°, 45°, 60°; Vertical: 75°, 90°, 105°;
+  Diagonal 135°: 120°, 135°, 150°).
+- Multi-scale structuring elements for hairline (1-2px), medium (3-5px), and broad (5-8px) scratches.
+- Dual-polarity defect capture (dark scratches on light regions via directional closing vs isotropic closing,
+  bright scratches on dark regions via directional opening vs isotropic opening).
+- Per-orientation-group geometric filtering preventing intersecting scratches from merging into falsely thick shapes.
+- Adaptive hysteresis connection and collinear micro-gap bridging to prevent scratch fragmentation.
+- Connected-component geometric filtering (aspect ratio, length, thickness, and ridge vs step-edge analysis).
+- Facial landmark awareness: specialized criteria inside sensitive biological zones (eyes/mouth) to prevent
+  false detection on facial features while fully preserving genuine scratches traversing the face.
 - Binary repair mask generation and safety validation with maximum coverage threshold guards.
-- OpenCV inpainting execution (Telea Fast Marching Method and Navier-Stokes) supporting both 3-channel BGR and 1-channel Grayscale.
+- Inpainting execution (LaMa Deep AI Fast Fourier Convolutions, OpenCV Telea Fast Marching, Navier-Stokes).
 - Empty mask zero-overhead no-op bypass.
 
 Dependencies:
@@ -16,21 +24,78 @@ Dependencies:
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 
 # Tuned defaults for archival photograph scratch detection
-DEFAULT_SCRATCH_THRESHOLD: int = 25
+DEFAULT_SCRATCH_THRESHOLD: int = 18
 DEFAULT_MIN_LENGTH: int = 10
-DEFAULT_MIN_ASPECT_RATIO: float = 3.0
+DEFAULT_MIN_ASPECT_RATIO: float = 2.8
 DEFAULT_MAX_THICKNESS: int = 6
-MAX_REPAIR_COVERAGE: float = 0.05  # Maximum 5% of total image area marked for repair
-DEFAULT_KERNEL_LENGTH: int = 11
+MAX_REPAIR_COVERAGE: float = 0.08  # Maximum 8% of total image area marked for repair
+DEFAULT_KERNEL_LENGTH: int = 13
 DEFAULT_INPAINT_RADIUS: int = 3
 DEFAULT_INPAINT_METHOD: str = "telea"
-MAX_NEIGHBOR_IQR: float = 40.0  # Max interquartile range of neighborhood pixels to accept as ridge
+MAX_NEIGHBOR_IQR: float = 45.0  # Max interquartile range of neighborhood pixels to accept as ridge
+
+# Directional angular families
+DIRECTIONAL_GROUPS: List[Tuple[str, List[float]]] = [
+    ("h", [0.0, 15.0, 165.0]),
+    ("d45", [30.0, 45.0, 60.0]),
+    ("v", [75.0, 90.0, 105.0]),
+    ("d135", [120.0, 135.0, 150.0]),
+]
+
+_KERNEL_CACHE: Dict[Tuple[int, float], np.ndarray] = {}
+
+
+def _create_line_kernel(length: int, angle_deg: float) -> np.ndarray:
+    """Generate a 2D binary line structuring element at a specified angle.
+
+    Args:
+        length: Pixel length of the line.
+        angle_deg: Orientation in degrees in [0.0, 180.0).
+
+    Returns:
+        Square uint8 NumPy array of shape (length, length).
+    """
+    length = max(int(length), 3)
+    if length % 2 == 0:
+        length += 1
+
+    key = (length, round(angle_deg, 1))
+    if key in _KERNEL_CACHE:
+        return _KERNEL_CACHE[key]
+
+    kernel = np.zeros((length, length), dtype=np.uint8)
+    center = length // 2
+
+    # Fast paths for orthogonal directions
+    if abs(angle_deg - 0.0) < 1e-3 or abs(angle_deg - 180.0) < 1e-3:
+        kernel[center, :] = 1
+        _KERNEL_CACHE[key] = kernel
+        return kernel
+    if abs(angle_deg - 90.0) < 1e-3:
+        kernel[:, center] = 1
+        _KERNEL_CACHE[key] = kernel
+        return kernel
+
+    angle_rad = np.deg2rad(angle_deg)
+    dx = np.cos(angle_rad)
+    dy = np.sin(angle_rad)
+
+    # Sample points along the line
+    for i in range(-center, center + 1):
+        x = int(round(center + i * dx))
+        y = int(round(center + i * dy))
+        if 0 <= x < length and 0 <= y < length:
+            kernel[y, x] = 1
+
+    kernel[center, center] = 1
+    _KERNEL_CACHE[key] = kernel
+    return kernel
 
 
 @dataclass
@@ -74,31 +139,33 @@ def _evaluate_ridge_profile(
     f_med = float(np.median(neighbor_pixels))
     contrast = abs(c_med - f_med)
 
-    # Split flanking pixels into lower and upper quartiles / halves
+    p75 = float(np.percentile(neighbor_pixels, 75))
+    p25 = float(np.percentile(neighbor_pixels, 25))
+    iqr = float(p75 - p25)
+
+    # Flanking halves to detect step edges
     f_low = neighbor_pixels[neighbor_pixels <= f_med]
     f_high = neighbor_pixels[neighbor_pixels >= f_med]
     mu_low = float(np.mean(f_low)) if len(f_low) > 0 else f_med
     mu_high = float(np.mean(f_high)) if len(f_high) > 0 else f_med
     step_diff = float(mu_high - mu_low)
 
-    p75 = float(np.percentile(neighbor_pixels, 75))
-    p25 = float(np.percentile(neighbor_pixels, 25))
-    iqr = float(p75 - p25)
+    # Extremum check: true scratch core is outside flanking envelope or has high contrast
+    is_bright_ridge = (c_med > f_med + 3.0) and (c_med >= p75 - 3.0 or contrast >= 12.0)
+    is_dark_ridge = (c_med < f_med - 3.0) and (c_med <= p25 + 3.0 or contrast >= 12.0)
+    is_extremum = is_bright_ridge or is_dark_ridge
 
-    # Extremum check: true scratch is distinctly outside the flanking envelope
-    is_extremum = (c_med < mu_low - 3.5) or (c_med > mu_high + 3.5)
-
-    # Flanking symmetry ratio (close to 1.0 for symmetric ridge, drops for step edge)
+    # Flanking symmetry ratio (high for symmetric ridge, low for step edge)
     sym_ratio = contrast / (contrast + step_diff + 1.0)
 
     # 1. Gradient-tolerant differential extremum check (e.g. scratches across face or lighting gradient)
-    if is_extremum and contrast >= 12.0:
-        conf = float(np.clip(0.4 * (contrast / 40.0) + 0.6 * sym_ratio, 0.0, 1.0))
+    if is_extremum and contrast >= 8.0:
+        conf = float(np.clip(0.4 * (contrast / 35.0) + 0.6 * sym_ratio, 0.0, 1.0))
         return True, conf
 
     # 2. Standard check: unimodal neighborhood (low IQR across uniform regions like skies, walls)
-    if iqr <= max_iqr and contrast >= 8.0:
-        conf = float(np.clip(0.5 * (contrast / 30.0) + 0.5 * (1.0 - (iqr / max_iqr)), 0.0, 1.0))
+    if iqr <= max_iqr and contrast >= 6.0 and is_extremum:
+        conf = float(np.clip(0.5 * (contrast / 25.0) + 0.5 * (1.0 - (iqr / max_iqr)), 0.0, 1.0))
         return True, conf
 
     return False, 0.0
@@ -151,7 +218,33 @@ def _filter_directional_components(
         if not is_ridge:
             continue
 
-        # Biological landmark protection: suppress false positives in eyes/mouth unless strong scratch
+        contours, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        if not contours:
+            continue
+
+        contour = contours[0]
+        if len(contour) >= 5:
+            rect = cv2.minAreaRect(contour)
+            rw, rh = rect[1]
+            length = max(rw, rh)
+            # Use true physical line thickness: area / length
+            phys_thick = float(area) / max(length, 1.0)
+            thickness = min(max(min(rw, rh), 1.0), phys_thick)
+        elif len(contour) >= 2:
+            pt1 = contour[0][0]
+            pt2 = contour[-1][0]
+            length = float(np.linalg.norm(pt1 - pt2))
+            thickness = max(float(area) / max(length, 1.0), 1.0)
+        else:
+            length = float(max(comp_w, comp_h))
+            thickness = float(max(min(comp_w, comp_h), 1))
+
+        aspect = length / max(thickness, 1.0)
+        bb_aspect = max(comp_w / max(comp_h, 1), comp_h / max(comp_w, 1))
+        effective_aspect = max(aspect, bb_aspect)
+
+        # Biological landmark protection (Phase E):
+        # Eyes/nostrils/lips are small and curved; authentic scratches cutting across landmarks are long and linear
         if protected_zones:
             cx = int(comp_left + comp_w / 2)
             cy = int(comp_top + comp_h / 2)
@@ -161,34 +254,10 @@ def _filter_directional_components(
                     is_in_protected = True
                     break
             if is_in_protected:
-                # Require higher confidence (>= 0.60) to modify pixels inside biological landmarks
-                if conf < 0.60:
+                # Small features in eyes/mouth are anatomical (eyelashes, eyelids, lip contours)
+                # Genuine scratches traversing landmarks must be sufficiently long and elongated
+                if length < 25 or effective_aspect < 3.2 or conf < 0.50:
                     continue
-
-        contours, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        if not contours:
-            continue
-
-        contour = contours[0]
-        if len(contour) >= 3:
-            rect = cv2.minAreaRect(contour)
-            rw, rh = rect[1]
-            length = max(rw, rh)
-            thickness = max(min(rw, rh), 1.0)
-            elongation = length / thickness
-        elif len(contour) == 2:
-            pt1 = contour[0][0]
-            pt2 = contour[1][0]
-            length = float(np.linalg.norm(pt1 - pt2))
-            thickness = 1.0
-            elongation = length / thickness
-        else:
-            length = float(max(comp_w, comp_h))
-            thickness = float(max(min(comp_w, comp_h), 1))
-            elongation = length / thickness
-
-        bb_aspect = max(comp_w / max(comp_h, 1), comp_h / max(comp_w, 1))
-        effective_aspect = max(elongation, bb_aspect)
 
         # Scratches must be elongated, sufficiently long, and thin
         if (
@@ -212,6 +281,7 @@ def detect_scratch_mask(
     max_thickness: int = DEFAULT_MAX_THICKNESS,
     max_coverage: float = MAX_REPAIR_COVERAGE,
     kernel_length: int = DEFAULT_KERNEL_LENGTH,
+    sensitivity: Optional[str] = None,
 ) -> Tuple[np.ndarray, ScratchRepairMetadata]:
     """Detect scratches and localized archival defects, returning a binary repair mask and metadata.
 
@@ -230,6 +300,8 @@ def detect_scratch_mask(
             Maximum allowable fraction of total image pixels marked for repair (safety cap).
         kernel_length:
             Length of directional structuring elements in pixels.
+        sensitivity:
+            Optional sensitivity preset ('low', 'medium', 'high') overriding threshold.
 
     Returns:
         Tuple of (binary repair mask as uint8 array of shape (H, W), ScratchRepairMetadata).
@@ -249,6 +321,17 @@ def detect_scratch_mask(
     if image.shape[0] < 2 or image.shape[1] < 2:
         raise ValueError("Image dimensions must be at least 2x2")
 
+    # Handle sensitivity preset
+    eff_threshold = threshold
+    if sensitivity is not None:
+        s_clean = str(sensitivity).lower().strip()
+        if s_clean == "high":
+            eff_threshold = 12
+        elif s_clean == "low":
+            eff_threshold = 25
+        elif s_clean == "medium":
+            eff_threshold = 18
+
     # 1. Grayscale representation
     if image.ndim == 3:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -266,97 +349,99 @@ def detect_scratch_mask(
             from .face_restorer import FaceRestorer
             faces = FaceRestorer.detect_faces(image)
             for (fx, fy, fw, fh) in faces:
+                # Eye band
                 protected_zones.append((
-                    fx + int(fw * 0.10),
-                    fy + int(fh * 0.18),
-                    fx + int(fw * 0.90),
-                    fy + int(fh * 0.52),
+                    fx + int(fw * 0.15),
+                    fy + int(fh * 0.22),
+                    fx + int(fw * 0.85),
+                    fy + int(fh * 0.48),
                 ))
+                # Mouth / lips band
                 protected_zones.append((
-                    fx + int(fw * 0.20),
-                    fy + int(fh * 0.65),
-                    fx + int(fw * 0.80),
+                    fx + int(fw * 0.25),
+                    fy + int(fh * 0.68),
+                    fx + int(fw * 0.75),
                     fy + int(fh * 0.88),
                 ))
         except Exception:
             pass
 
-    # 2. Build directional structuring elements (multi-scale primary + fine)
-    k_len = max(kernel_length, 3)
-    k_h = np.ones((1, k_len), dtype=np.uint8)
-    k_v = np.ones((k_len, 1), dtype=np.uint8)
-    k_45 = np.eye(k_len, dtype=np.uint8)[::-1].copy()
-    k_135 = np.eye(k_len, dtype=np.uint8).copy()
+    # 2. Multi-Orientation Grouped Morphological Filtering
+    k_len_1 = max(kernel_length, 9)
+    k_len_2 = max(k_len_1 + 8, 21)
+    k_iso_1 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    k_iso_2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
 
-    # Fine-scale kernel for narrow hairline scratches
-    k_fine = max(k_len - 4, 5)
-    k_hf = np.ones((1, k_fine), dtype=np.uint8)
-    k_vf = np.ones((k_fine, 1), dtype=np.uint8)
+    combined_accepted = np.zeros((h, w), dtype=np.uint8)
+    total_components = 0
+    all_confidences: List[float] = []
 
-    # 3. Morphological operations
-    # Black-hat (dark defects against lighter background)
-    bh_h = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, k_h)
-    bh_v = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, k_v)
-    bh_45 = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, k_45)
-    bh_135 = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, k_135)
+    t_high = max(eff_threshold, 8)
+    t_low = max(int(t_high * 0.65), 6)
+    k_bridge = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
 
-    # Top-hat (bright defects against darker background)
-    th_h = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k_h)
-    th_v = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k_v)
-    th_45 = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k_45)
-    th_135 = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k_135)
+    for _, angles in DIRECTIONAL_GROUPS:
+        lines_1 = [_create_line_kernel(k_len_1, a) for a in angles]
+        lines_2 = [_create_line_kernel(k_len_2, a) for a in angles]
 
-    # 4. Orthogonal directional subtraction
-    diff_dark_v = cv2.subtract(bh_h, bh_v)
-    diff_dark_h = cv2.subtract(bh_v, bh_h)
-    diff_dark_45 = cv2.subtract(bh_135, bh_45)
-    diff_dark_135 = cv2.subtract(bh_45, bh_135)
+        open_1 = np.maximum.reduce([cv2.morphologyEx(gray, cv2.MORPH_OPEN, k) for k in lines_1])
+        close_1 = np.minimum.reduce([cv2.morphologyEx(gray, cv2.MORPH_CLOSE, k) for k in lines_1])
+        open_2 = np.maximum.reduce([cv2.morphologyEx(gray, cv2.MORPH_OPEN, k) for k in lines_2])
+        close_2 = np.minimum.reduce([cv2.morphologyEx(gray, cv2.MORPH_CLOSE, k) for k in lines_2])
 
-    diff_bright_v = cv2.subtract(th_h, th_v)
-    diff_bright_h = cv2.subtract(th_v, th_h)
-    diff_bright_45 = cv2.subtract(th_135, th_45)
-    diff_bright_135 = cv2.subtract(th_45, th_135)
+        resp_b = np.maximum(
+            cv2.subtract(open_1, cv2.morphologyEx(gray, cv2.MORPH_OPEN, k_iso_1)),
+            cv2.subtract(open_2, cv2.morphologyEx(gray, cv2.MORPH_OPEN, k_iso_2))
+        )
+        resp_d = np.maximum(
+            cv2.subtract(cv2.morphologyEx(gray, cv2.MORPH_CLOSE, k_iso_1), close_1),
+            cv2.subtract(cv2.morphologyEx(gray, cv2.MORPH_CLOSE, k_iso_2), close_2)
+        )
+        resp = np.maximum(resp_b, resp_d)
 
-    # Threshold each directional response
-    _, m_dv = cv2.threshold(diff_dark_v, threshold, 255, cv2.THRESH_BINARY)
-    _, m_dh = cv2.threshold(diff_dark_h, threshold, 255, cv2.THRESH_BINARY)
-    _, m_d45 = cv2.threshold(diff_dark_45, threshold, 255, cv2.THRESH_BINARY)
-    _, m_d135 = cv2.threshold(diff_dark_135, threshold, 255, cv2.THRESH_BINARY)
+        # Adaptive Hysteresis Thresholding within orientation group
+        high_mask = (resp >= t_high).astype(np.uint8)
+        low_mask = (resp >= t_low).astype(np.uint8)
 
-    _, m_bv = cv2.threshold(diff_bright_v, threshold, 255, cv2.THRESH_BINARY)
-    _, m_bh = cv2.threshold(diff_bright_h, threshold, 255, cv2.THRESH_BINARY)
-    _, m_b45 = cv2.threshold(diff_bright_45, threshold, 255, cv2.THRESH_BINARY)
-    _, m_b135 = cv2.threshold(diff_bright_135, threshold, 255, cv2.THRESH_BINARY)
+        num_labels_hyst, labels_hyst, _, _ = cv2.connectedComponentsWithStats(low_mask, connectivity=8)
+        hyst_mask = np.zeros_like(low_mask)
+        if num_labels_hyst > 1 and np.count_nonzero(high_mask) > 0:
+            for i in range(1, num_labels_hyst):
+                comp_pixels = (labels_hyst == i)
+                if np.any(comp_pixels & (high_mask > 0)):
+                    hyst_mask[comp_pixels] = 255
+        else:
+            hyst_mask = high_mask * 255
 
-    # 5. Connected-component geometric filtering performed per-direction with landmark protection
-    mask_v, c_v, conf_v = _filter_directional_components(
-        cv2.bitwise_or(m_dv, m_bv), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
-    )
-    mask_h, c_h, conf_h = _filter_directional_components(
-        cv2.bitwise_or(m_dh, m_bh), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
-    )
-    mask_45, c_45, conf_45 = _filter_directional_components(
-        cv2.bitwise_or(m_d45, m_b45), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
-    )
-    mask_135, c_135, conf_135 = _filter_directional_components(
-        cv2.bitwise_or(m_d135, m_b135), gray, min_length, min_aspect_ratio, max_thickness, max_comp_pixels, protected_zones
-    )
+        # Bridge micro-breaks along scratch orientation
+        cand_bridged = cv2.morphologyEx(hyst_mask, cv2.MORPH_CLOSE, k_bridge)
 
-    combined_mask = cv2.bitwise_or(mask_v, mask_h)
-    combined_mask = cv2.bitwise_or(combined_mask, mask_45)
-    combined_mask = cv2.bitwise_or(combined_mask, mask_135)
-    total_components = c_v + c_h + c_45 + c_135
-    all_confs = [c for c in [conf_v, conf_h, conf_45, conf_135] if c > 0.0]
-    mean_confidence = float(np.mean(all_confs)) if all_confs else 0.0
+        # Geometric filtering per orientation group
+        group_accepted, group_count, group_conf = _filter_directional_components(
+            cand_bridged,
+            gray,
+            min_length=min_length,
+            min_aspect_ratio=min_aspect_ratio,
+            max_thickness=max_thickness,
+            max_pixels=max_comp_pixels,
+            protected_zones=protected_zones,
+        )
 
-    # 6. Gentle dilation to encompass boundary penumbra
+        if group_count > 0:
+            combined_accepted = cv2.bitwise_or(combined_accepted, group_accepted)
+            total_components += group_count
+            all_confidences.append(group_conf)
+
+    mean_confidence = float(np.mean(all_confidences)) if all_confidences else 0.0
+
+    # 3. Gentle dilation to encompass boundary penumbra
     if total_components > 0:
-        kernel_dilate = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-        repair_mask = cv2.dilate(combined_mask, kernel_dilate, iterations=1)
+        kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        repair_mask = cv2.dilate(combined_accepted, kernel_dilate, iterations=1)
     else:
-        repair_mask = combined_mask
+        repair_mask = combined_accepted
 
-    # 7. Safety coverage validation
+    # 4. Safety coverage validation
     repaired_pixels = int(np.count_nonzero(repair_mask))
     coverage = repaired_pixels / total_pixels
 
@@ -459,17 +544,17 @@ def select_inpainting_engine(
     min_dims = [min(w, h) for w, h in zip(widths, heights)]
     max_thickness = max(min_dims) if min_dims else 1
 
-    # 1. Broad damage or large tear hole (area >= 350 or thickness >= 5):
+    # 1. Broad damage or large tear hole (area >= 250 or thickness >= 4 or coverage >= 0.20%):
     #    Requires deep neural inpainting (LaMa Fast Fourier Convolutions)
     #    to reconstruct missing textures without blur.
-    if max_comp_area >= 350 or max_thickness >= 5 or meta.coverage_percentage >= 0.25:
+    if max_comp_area >= 250 or max_thickness >= 4 or meta.coverage_percentage >= 0.20:
         return "lama", (
             f"Significant tear / broad damage detected (max_comp_area={max_comp_area}px, "
             f"max_thickness={max_thickness}px, coverage={meta.coverage_percentage:.2f}%). "
             "LaMa deep Fast Fourier Convolutions deployed for global context synthesis."
         )
 
-    # 2. Narrow hairline scratches (thickness <= 4, small areas):
+    # 2. Narrow hairline scratches (thickness <= 3, small areas):
     #    Telea Fast Marching PDE is fast (<20ms) and introduces zero boundary halos.
     return "telea", (
         f"Hairline scratch damage (max_thickness={max_thickness}px, max_comp_area={max_comp_area}px). "
@@ -482,6 +567,7 @@ def repair_scratches(
     mask: Optional[np.ndarray] = None,
     inpaint_radius: int = DEFAULT_INPAINT_RADIUS,
     method: str = DEFAULT_INPAINT_METHOD,
+    sensitivity: Optional[str] = None,
 ) -> Tuple[np.ndarray, ScratchRepairMetadata]:
     """Reconstruct scratch-damaged pixels using hybrid inpainting.
 
@@ -494,6 +580,8 @@ def repair_scratches(
             Inpainting neighborhood radius in pixels (typically 2-5, default 3).
         method:
             Inpainting algorithm: 'lama', 'telea', 'ns', or 'hybrid' / 'auto'.
+        sensitivity:
+            Optional sensitivity preset ('low', 'medium', 'high') if mask is computed.
 
     Returns:
         Tuple of (reconstructed uint8 image NumPy array, ScratchRepairMetadata).
@@ -522,7 +610,7 @@ def repair_scratches(
 
     # Generate or validate mask
     if mask is None:
-        repair_mask, meta = detect_scratch_mask(image)
+        repair_mask, meta = detect_scratch_mask(image, sensitivity=sensitivity)
     else:
         if not isinstance(mask, np.ndarray):
             raise TypeError("Mask must be a numpy ndarray")
