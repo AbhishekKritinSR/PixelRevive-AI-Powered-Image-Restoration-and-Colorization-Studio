@@ -32,4 +32,6 @@ tests/real_world/outputs/*
 !tests/real_world/outputs/.gitkeep
 tests/real_world/masks/*
 !tests/real_world/masks/.gitkeep
+tests/real_world/eval_clahe_sharpen/
+tests/real_world/eval_face_enhancement/
 tests/real_world/reports/visual_gallery/*.png

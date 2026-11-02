@@ -259,6 +259,44 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
           </label>
         </div>
 
+        {/* Sub-option: Adaptive Contrast Safeguard */}
+        {options.contrast && (
+          <div
+            className="sub-option-container"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "0.75rem",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                Adaptive Dynamic Range Safeguard
+              </div>
+              <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
+                Auto-bypasses CLAHE when natural contrast distribution is already adequate. Disable to force contrast recovery.
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={options.adaptive_contrast ?? true}
+                disabled={disabled}
+                onChange={() =>
+                  onChange({
+                    ...options,
+                    adaptive_contrast: !(options.adaptive_contrast ?? true),
+                  })
+                }
+                aria-label="Toggle Adaptive Contrast Safeguard"
+              />
+              <span className="slider" />
+            </label>
+          </div>
+        )}
+
         {/* ============================================================= */}
         {/* 4. Laplacian Sharpening                                       */}
         {/* ============================================================= */}
@@ -287,6 +325,44 @@ export const RestorationControls: React.FC<RestorationControlsProps> = ({
             <span className="slider" />
           </label>
         </div>
+
+        {/* Sub-option: Adaptive Edge Safeguard */}
+        {options.sharpen && (
+          <div
+            className="sub-option-container"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "0.75rem",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                Adaptive Edge Safeguard
+              </div>
+              <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
+                Auto-bypasses sharpening on already-crisp or noisy photographs. Disable to force edge sharpening.
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={options.adaptive_sharpen ?? true}
+                disabled={disabled}
+                onChange={() =>
+                  onChange({
+                    ...options,
+                    adaptive_sharpen: !(options.adaptive_sharpen ?? true),
+                  })
+                }
+                aria-label="Toggle Adaptive Edge Safeguard"
+              />
+              <span className="slider" />
+            </label>
+          </div>
+        )}
 
         {/* ============================================================= */}
         {/* 5. Face Detail Enhancement (Identity-Preserving)              */}

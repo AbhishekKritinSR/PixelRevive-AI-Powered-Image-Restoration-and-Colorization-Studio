@@ -34,8 +34,10 @@ This module does not:
 
 from typing import Dict, Tuple, Union
 
+import cv2
 import numpy as np
 
+from src.config import CLAHE_CLIP_LIMIT, CLAHE_TILE_GRID_SIZE
 from .contrast import adaptive_enhance_contrast, enhance_contrast
 from .denoiser import adaptive_denoise_image, denoise_image
 from .face_restorer import FaceRestorer
@@ -151,44 +153,97 @@ def enhance_image(
             )
 
     if contrast:
+        gray_before_c = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+        before_c_std = float(gray_before_c.std())
         if adaptive_contrast:
             enhanced_contrast, contrast_params = adaptive_enhance_contrast(result)
-            summary["contrast"] = contrast_params.reason
             if not contrast_params.skip:
                 result = enhanced_contrast
+                after_c_std = float(cv2.cvtColor(result, cv2.COLOR_BGR2GRAY).std())
+                summary["contrast"] = (
+                    f"Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel "
+                    f"(clip_limit={contrast_params.clip_limit}, grid={contrast_params.tile_grid_size[0]}x{contrast_params.tile_grid_size[1]}). "
+                    f"Requested: true, Executed: true, Bypassed: false. "
+                    f"Contrast std: {before_c_std:.1f} -> {after_c_std:.1f}. "
+                    f"Reason: {contrast_params.reason}"
+                )
+            else:
+                summary["contrast"] = (
+                    f"Bypassed: contrast enhancement skipped by dynamic range safeguard. "
+                    f"Requested: true, Executed: false, Bypassed: true. "
+                    f"Measured std={contrast_params.contrast_score:.1f}, dynamic range={contrast_params.dynamic_range:.1f}. "
+                    f"Reason: {contrast_params.reason}"
+                )
         else:
             result = enhance_contrast(result)
+            after_c_std = float(cv2.cvtColor(result, cv2.COLOR_BGR2GRAY).std())
             summary["contrast"] = (
-                "Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel."
+                f"Applied: Contrast Limited Adaptive Histogram Equalization (CLAHE) on luminance channel "
+                f"(clip_limit={CLAHE_CLIP_LIMIT}, grid={CLAHE_TILE_GRID_SIZE[0]}x{CLAHE_TILE_GRID_SIZE[1]}). "
+                f"Requested: true, Executed: true, Bypassed: false. "
+                f"Contrast std: {before_c_std:.1f} -> {after_c_std:.1f}. "
+                f"Reason: Explicit client request (adaptive safeguard disabled)."
             )
     else:
-        summary["contrast"] = "Bypassed: contrast enhancement was not requested by client option."
+        summary["contrast"] = (
+            "Bypassed: contrast enhancement was not requested by client option. "
+            "Requested: false, Executed: false, Bypassed: true."
+        )
 
     if face_restore:
-        restored, face_count = FaceRestorer.restore_faces(result)
+        restored, face_count = FaceRestorer.restore_faces(result, enhancement_strength=0.75)
         if face_count > 0:
             result = restored
             summary["face_enhancement"] = (
-                f"Applied: noise-safe localized spatial enhancement on {face_count} detected face(s)."
+                f"Applied: noise-safe localized spatial enhancement on {face_count} detected face(s). "
+                f"Requested: true, Executed: true, Bypassed: false."
             )
         else:
             summary["face_enhancement"] = (
-                "Bypassed: no frontal faces detected in image canvas."
-            )
-
-    if sharpen:
-        if adaptive_sharpen:
-            sharpened, sharpen_params = adaptive_sharpen_image(result)
-            summary["sharpening"] = sharpen_params.reason
-            if not sharpen_params.skip:
-                result = sharpened
-        else:
-            result = sharpen_image(result)
-            summary["sharpening"] = (
-                "Applied: unity-gain high-pass Laplacian sharpening for edge recovery."
+                "Bypassed: no frontal faces detected in image canvas. "
+                "Requested: true, Executed: false, Bypassed: true."
             )
     else:
-        summary["sharpening"] = "Bypassed: sharpening was not requested by client option."
+        summary["face_enhancement"] = (
+            "Bypassed: face enhancement was not requested by client option. "
+            "Requested: false, Executed: false, Bypassed: true."
+        )
+
+    if sharpen:
+        gray_before_s = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+        before_lap = float(cv2.Laplacian(gray_before_s, cv2.CV_64F).var())
+        if adaptive_sharpen:
+            sharpened, sharpen_params = adaptive_sharpen_image(result)
+            if not sharpen_params.skip:
+                result = sharpened
+                after_lap = float(cv2.Laplacian(cv2.cvtColor(result, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var())
+                summary["sharpening"] = (
+                    f"Applied: unity-gain high-pass Laplacian sharpening for edge recovery (kernel 3x3). "
+                    f"Requested: true, Executed: true, Bypassed: false. "
+                    f"Sharpness lap_var: {before_lap:.1f} -> {after_lap:.1f}. "
+                    f"Reason: {sharpen_params.reason}"
+                )
+            else:
+                summary["sharpening"] = (
+                    f"Bypassed: sharpening skipped by adaptive protection. "
+                    f"Requested: true, Executed: false, Bypassed: true. "
+                    f"Measured lap_var={sharpen_params.sharpness_score:.1f}, noise_sigma={sharpen_params.noise_sigma:.2f}. "
+                    f"Reason: {sharpen_params.reason}"
+                )
+        else:
+            result = sharpen_image(result)
+            after_lap = float(cv2.Laplacian(cv2.cvtColor(result, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var())
+            summary["sharpening"] = (
+                f"Applied: unity-gain high-pass Laplacian sharpening for edge recovery (kernel 3x3). "
+                f"Requested: true, Executed: true, Bypassed: false. "
+                f"Sharpness lap_var: {before_lap:.1f} -> {after_lap:.1f}. "
+                f"Reason: Explicit client request (adaptive safeguard disabled)."
+            )
+    else:
+        summary["sharpening"] = (
+            "Bypassed: sharpening was not requested by client option. "
+            "Requested: false, Executed: false, Bypassed: true."
+        )
 
     if upscale:
         result, _ = upscale_image(result, scale=scale, model=sr_model)
