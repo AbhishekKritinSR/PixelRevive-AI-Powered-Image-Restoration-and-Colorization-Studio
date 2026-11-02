@@ -383,5 +383,5 @@ npm --prefix frontend run build
 
 ## Author
 
-**Vishal Koripala**  
+**AK**  
 AI & Computer Vision Practitioner
